@@ -154,52 +154,69 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
   return (
     <div className="bg-white dark:bg-darkCard p-5 rounded-2xl border border-gray-300 dark:border-darkBorder shadow-[var(--shadow-card)]">
 
-      {/* Admin reminder buttons */}
+      {/* Admin reminder cards */}
       {isAdmin && (
-        <div className="mb-3 flex flex-col gap-2">
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleRemind("trash")}
-              disabled={reminding !== null}
-              className="flex-1 py-1.5 px-3 text-xs font-medium bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 text-orange-700 dark:text-orange-400 rounded-md transition-colors disabled:opacity-50"
-              title={`Notify ${currentTrashTenant} about trash duty this week`}
-            >
-              {reminding === "trash" ? "Sending…" : "🗑️ Remind Trash"}
-            </button>
-            <button
-              onClick={() => handleRemind("bathroom")}
-              disabled={reminding !== null}
-              className="flex-1 py-1.5 px-3 text-xs font-medium bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded-md transition-colors disabled:opacity-50"
-              title={`Notify ${currentBathroomTenant} about bathroom cleaning duty`}
-            >
-              {reminding === "bathroom" ? "Sending…" : "✨ Remind Bathroom"}
-            </button>
+        <div className="mb-4 flex flex-col gap-2">
+
+          {/* Trash card */}
+          <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-900/40">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">🗑️ Trash</span>
+              <span className="text-[10px] text-orange-500/80 dark:text-orange-500/60 truncate">This week: {currentTrashTenant}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => handleToggleAuto("trash")}
+                disabled={togglingAuto !== null}
+                title={autoTrash ? "Auto reminder on — click to disable" : "Auto reminder off — click to enable"}
+                className="flex items-center gap-1.5 text-[10px] text-orange-600 dark:text-orange-400 disabled:opacity-50"
+              >
+                <span className={`w-7 h-4 rounded-full transition-colors relative ${autoTrash ? "bg-meadowOrange" : "bg-gray-300 dark:bg-gray-600"}`}>
+                  <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${autoTrash ? "left-3.5" : "left-0.5"}`} />
+                </span>
+                <span className="hidden sm:inline">Auto</span>
+              </button>
+              <button
+                onClick={() => handleRemind("trash")}
+                disabled={reminding !== null}
+                className="text-[11px] font-medium px-2.5 py-1 bg-meadowOrange hover:bg-orange-600 text-white rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {reminding === "trash" ? "Sending…" : "Send now"}
+              </button>
+            </div>
           </div>
+
+          {/* Bathroom card */}
+          <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">✨ Bathroom</span>
+              <span className="text-[10px] text-blue-500/80 dark:text-blue-500/60 truncate">This week: {currentBathroomTenant}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => handleToggleAuto("bathroom")}
+                disabled={togglingAuto !== null}
+                title={autoBathroom ? "Auto reminder on — click to disable" : "Auto reminder off — click to enable"}
+                className="flex items-center gap-1.5 text-[10px] text-blue-600 dark:text-blue-400 disabled:opacity-50"
+              >
+                <span className={`w-7 h-4 rounded-full transition-colors relative ${autoBathroom ? "bg-blue-400" : "bg-gray-300 dark:bg-gray-600"}`}>
+                  <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${autoBathroom ? "left-3.5" : "left-0.5"}`} />
+                </span>
+                <span className="hidden sm:inline">Auto</span>
+              </button>
+              <button
+                onClick={() => handleRemind("bathroom")}
+                disabled={reminding !== null}
+                className="text-[11px] font-medium px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {reminding === "bathroom" ? "Sending…" : "Send now"}
+              </button>
+            </div>
+          </div>
+
           {remindMsg && (
             <p className="text-xs text-center text-green-600 dark:text-green-400 font-medium">{remindMsg}</p>
           )}
-          <div className="flex gap-3 pt-1">
-            <button
-              onClick={() => handleToggleAuto("trash")}
-              disabled={togglingAuto !== null}
-              className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
-            >
-              <span className={`w-7 h-4 rounded-full transition-colors relative ${autoTrash ? "bg-meadowOrange" : "bg-gray-300 dark:bg-gray-600"}`}>
-                <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${autoTrash ? "left-3.5" : "left-0.5"}`} />
-              </span>
-              Auto trash
-            </button>
-            <button
-              onClick={() => handleToggleAuto("bathroom")}
-              disabled={togglingAuto !== null}
-              className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
-            >
-              <span className={`w-7 h-4 rounded-full transition-colors relative ${autoBathroom ? "bg-blue-400" : "bg-gray-300 dark:bg-gray-600"}`}>
-                <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${autoBathroom ? "left-3.5" : "left-0.5"}`} />
-              </span>
-              Auto bathroom
-            </button>
-          </div>
         </div>
       )}
 
