@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import type { UtilityDocument } from "@prisma/client";
 import { redirect } from "next/navigation";
 import UtilitiesClient from "./UtilitiesClient";
 
@@ -16,7 +17,7 @@ export default async function UtilitiesPage() {
     prisma.utilityDocument.findMany({ orderBy: [{ year: "desc" }, { month: "desc" }] }),
   ]);
 
-  const documents = rawDocuments.map((d) => ({
+  const documents = rawDocuments.map((d: UtilityDocument) => ({
     ...d,
     billStartDate: d.billStartDate ? d.billStartDate.toISOString() : null,
     billEndDate: d.billEndDate ? d.billEndDate.toISOString() : null,

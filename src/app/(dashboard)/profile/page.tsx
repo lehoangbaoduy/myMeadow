@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { MaintenanceRequest } from "@prisma/client";
 import { redirect } from "next/navigation";
 import TenantProfileForm from "@/components/TenantProfileForm";
 import ProfileRequestButtons from "@/components/ProfileRequestButtons";
@@ -52,7 +53,7 @@ export default async function ProfilePage() {
         {/* Action buttons */}
         <ProfileRequestButtons
           tenantName={tenant.name}
-          pendingRequests={pendingRequests.map((r) => ({
+          pendingRequests={pendingRequests.map((r: MaintenanceRequest) => ({
             id: r.id,
             requestType: r.requestType,
             description: r.description,
