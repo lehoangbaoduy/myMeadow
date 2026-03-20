@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { currentUser as getClerkUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import type { MaintenanceRequest } from "@prisma/client";
 import { redirect } from "next/navigation";
@@ -6,14 +7,25 @@ import TenantProfileForm from "@/components/TenantProfileForm";
 import ProfileRequestButtons from "@/components/ProfileRequestButtons";
 
 export default async function ProfilePage() {
-  const currentUser = await getCurrentUser();
+  const [currentUser, clerkUser] = await Promise.all([getCurrentUser(), getClerkUser()]);
   if (!currentUser) redirect("/sign-in");
   if (!currentUser.tenantId) redirect("/sign-in");
+
+  const clerkEmail = clerkUser?.emailAddresses.find(e => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: currentUser.tenantId },
   });
   if (!tenant) redirect("/sign-in");
+
+  // Auto-save Clerk email if the tenant doesn't have one yet
+  if (!tenant.email && clerkEmail) {
+    await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: { email: clerkEmail },
+    });
+    tenant.email = clerkEmail;
+  }
 
   const pendingRequests = await prisma.maintenanceRequest.findMany({
     where: { tenantId: tenant.id, status: "PENDING" },

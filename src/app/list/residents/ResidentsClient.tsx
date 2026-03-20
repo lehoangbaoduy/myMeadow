@@ -152,7 +152,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
 
   const formatDate = (d: Date | string | null) => {
     if (!d) return "—";
-    return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
   };
 
   return (
