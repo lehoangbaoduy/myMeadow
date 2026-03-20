@@ -194,13 +194,13 @@ function BillChartSection({ isAdmin, bills, onUpdated }: { isAdmin: boolean; bil
                 strokeWidth={0}
                 paddingAngle={2}
                 labelLine={{ stroke: "#94a3b8", strokeWidth: 1 }}
-                label={({ name, cx, cy, midAngle, outerRadius }) => {
+                label={({ name, cx, cy, midAngle, outerRadius }: any) => {
                   const RADIAN = Math.PI / 180;
-                  const radius = (outerRadius as number) + 24;
-                  const x = (cx as number) + radius * Math.cos(-midAngle * RADIAN);
-                  const y = (cy as number) + radius * Math.sin(-midAngle * RADIAN);
+                  const radius = outerRadius + 24;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
                   return (
-                    <text x={x} y={y} textAnchor={x > (cx as number) ? "start" : "end"} dominantBaseline="central" fontSize={10} fill="#6b7280" fontWeight={500}>
+                    <text x={x} y={y} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fontSize={10} fill="#6b7280" fontWeight={500}>
                       {name}
                     </text>
                   );
