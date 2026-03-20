@@ -52,9 +52,7 @@ function calcGross(bill: UtilityBill | null) {
     { label: "Cường — Rent",              sign: "+", amount: RENT.cuong },
     { label: "Cường — Utils 1/6.5",       sign: "+", amount: totalUtil * UTILITY_SHARES.cuong },
     { label: "Khoa & Thảo — Rent",        sign: "+", amount: RENT.khaoThao },
-    { label: "Khoa & Thảo — Utils 2/6.5", sign: "+", amount: totalUtil * UTILITY_SHARES.khaoThao },
-    { label: "Bảo — Utils 1/6.5",         sign: "+", amount: totalUtil * UTILITY_SHARES.bao },
-    { label: "Nhi — Utils 0.5/6.5",       sign: "+", amount: totalUtil * UTILITY_SHARES.nhi },
+    { label: "Khoa & Thảo — Utils 2/6.5", sign: "+", amount: totalUtil * UTILITY_SHARES.khaoThao }
   ];
 
   const rows = [...incomes, ...expenses];

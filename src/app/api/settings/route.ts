@@ -3,9 +3,13 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const settings = await prisma.appSetting.findMany();
-  const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
-  return NextResponse.json(map);
+  try {
+    const settings = await prisma.appSetting.findMany();
+    const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+    return NextResponse.json(map);
+  } catch {
+    return NextResponse.json({});
+  }
 }
 
 export async function PATCH(req: NextRequest) {
