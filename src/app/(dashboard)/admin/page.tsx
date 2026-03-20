@@ -19,12 +19,12 @@ const AdminPage = async () => {
 
   const latestBill = bills.length > 0 ? bills[bills.length - 1] : null;
 
-  const birthdays = tenantDobs
+  const birthdays = (tenantDobs as { name: string; dob: Date | null }[])
     .filter((t): t is { name: string; dob: Date } => t.dob !== null)
     .map((t) => ({
       name: t.name,
-      month: new Date(t.dob!).getUTCMonth() + 1,
-      day: new Date(t.dob!).getUTCDate(),
+      month: new Date(t.dob).getUTCMonth() + 1,
+      day: new Date(t.dob).getUTCDate(),
     }));
 
   return (
