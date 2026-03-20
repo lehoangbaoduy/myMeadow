@@ -37,8 +37,10 @@ model Tenant {
   dob                 DateTime?
   gender              Gender
   phone               String?
+  email               String?
   roomNumber          String?
   notes               String?
+  bathroomDuty        Boolean              @default(false)
   userId              Int                  @unique
   user                User                 @relation(fields: [userId], references: [id])
   trashAssignments    TrashAssignment[]
@@ -133,6 +135,12 @@ model InventoryItem {
   level     Float    @default(1.0)
   isCustom  Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
   updatedAt DateTime @updatedAt
 }
 

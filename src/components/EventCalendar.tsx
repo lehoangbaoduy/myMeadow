@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import {
@@ -11,22 +11,20 @@ import {
 type ValuePiece = Date | null;
 type Value = ValuePiece | [ValuePiece, ValuePiece];
 
-const MALE_TENANTS = ["Bảo", "Cường", "Khoa", "Dương"];
-const ALL_TENANTS = ["Bảo", "Khoa", "Cường"];
-
-function getTrashAssignment(thursday: Date) {
+function getTrashAssignment(thursday: Date, maleTenants: string[]) {
   const weekIdx = getWeekIndex(thursday);
-  const tenant =
-    MALE_TENANTS[((weekIdx % MALE_TENANTS.length) + MALE_TENANTS.length) % MALE_TENANTS.length];
+  const tenant = maleTenants.length > 0
+    ? maleTenants[((weekIdx % maleTenants.length) + maleTenants.length) % maleTenants.length]
+    : "—";
   const hasRecycle = weekIdx % 2 === 0;
   return { tenant, hasRecycle };
 }
 
-function getBathroomAssignment(thursday: Date) {
+function getBathroomAssignment(thursday: Date, bathroomTenants: string[]) {
   const weekIdx = getWeekIndex(thursday);
-  return ALL_TENANTS[
-    ((Math.floor(weekIdx / 2) % ALL_TENANTS.length) + ALL_TENANTS.length) % ALL_TENANTS.length
-  ];
+  return bathroomTenants.length > 0
+    ? bathroomTenants[((Math.floor(weekIdx / 2) % bathroomTenants.length) + bathroomTenants.length) % bathroomTenants.length]
+    : "—";
 }
 
 /** Returns the Thursday of the same ISO week as the given date (looking backward). */
@@ -55,9 +53,11 @@ interface Birthday {
 interface Props {
   isAdmin?: boolean;
   birthdays?: Birthday[];
+  maleTenants?: string[];
+  bathroomTenants?: string[];
 }
 
-const EventCalendar = ({ isAdmin = false, birthdays = [] }: Props) => {
+const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bathroomTenants = [] }: Props) => {
   const today = new Date();
   const [selected, setSelected] = useState<Value>(today);
   const [activeStart, setActiveStart] = useState<Date>(
@@ -65,6 +65,34 @@ const EventCalendar = ({ isAdmin = false, birthdays = [] }: Props) => {
   );
   const [reminding, setReminding] = useState<"trash" | "bathroom" | null>(null);
   const [remindMsg, setRemindMsg] = useState<string | null>(null);
+  const [autoTrash, setAutoTrash] = useState(true);
+  const [autoBathroom, setAutoBathroom] = useState(true);
+  const [togglingAuto, setTogglingAuto] = useState<"trash" | "bathroom" | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.autoTrashReminder !== undefined) setAutoTrash(data.autoTrashReminder === "true");
+        if (data.autoBathroomReminder !== undefined) setAutoBathroom(data.autoBathroomReminder === "true");
+      })
+      .catch(() => null);
+  }, [isAdmin]);
+
+  const handleToggleAuto = async (type: "trash" | "bathroom") => {
+    const key = type === "trash" ? "autoTrashReminder" : "autoBathroomReminder";
+    const newValue = type === "trash" ? !autoTrash : !autoBathroom;
+    setTogglingAuto(type);
+    await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value: String(newValue) }),
+    }).catch(() => null);
+    if (type === "trash") setAutoTrash(newValue);
+    else setAutoBathroom(newValue);
+    setTogglingAuto(null);
+  };
 
   const year = activeStart.getFullYear();
   const month = activeStart.getMonth();
@@ -83,12 +111,12 @@ const EventCalendar = ({ isAdmin = false, birthdays = [] }: Props) => {
 
   const focusedThursday = getThursdayOfWeek(selectedDate);
 
-  const clickedTrash = selectedThursday ? getTrashAssignment(selectedThursday) : null;
+  const clickedTrash = selectedThursday ? getTrashAssignment(selectedThursday, maleTenants) : null;
   const clickedBathroomThursday = selectedThursday
-    ? getBathroomAssignment(selectedThursday)
+    ? getBathroomAssignment(selectedThursday, bathroomTenants)
     : null;
   const clickedBathroomSaturday = selectedSaturday
-    ? getBathroomAssignment(getThursdayOfSameWeek(selectedSaturday))
+    ? getBathroomAssignment(getThursdayOfSameWeek(selectedSaturday), bathroomTenants)
     : null;
 
   // Birthdays on the selected day
@@ -98,8 +126,8 @@ const EventCalendar = ({ isAdmin = false, birthdays = [] }: Props) => {
 
   // Current week's assignments (for admin remind buttons tooltip)
   const currentThursday = getThursdayOfWeek(today);
-  const currentTrashTenant = getTrashAssignment(currentThursday).tenant;
-  const currentBathroomTenant = getBathroomAssignment(currentThursday);
+  const currentTrashTenant = getTrashAssignment(currentThursday, maleTenants).tenant;
+  const currentBathroomTenant = getBathroomAssignment(currentThursday, bathroomTenants);
 
   const handleRemind = async (type: "trash" | "bathroom") => {
     setReminding(type);
@@ -150,6 +178,28 @@ const EventCalendar = ({ isAdmin = false, birthdays = [] }: Props) => {
           {remindMsg && (
             <p className="text-xs text-center text-green-600 dark:text-green-400 font-medium">{remindMsg}</p>
           )}
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={() => handleToggleAuto("trash")}
+              disabled={togglingAuto !== null}
+              className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
+            >
+              <span className={`w-7 h-4 rounded-full transition-colors relative ${autoTrash ? "bg-meadowOrange" : "bg-gray-300 dark:bg-gray-600"}`}>
+                <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${autoTrash ? "left-3.5" : "left-0.5"}`} />
+              </span>
+              Auto trash
+            </button>
+            <button
+              onClick={() => handleToggleAuto("bathroom")}
+              disabled={togglingAuto !== null}
+              className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
+            >
+              <span className={`w-7 h-4 rounded-full transition-colors relative ${autoBathroom ? "bg-blue-400" : "bg-gray-300 dark:bg-gray-600"}`}>
+                <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${autoBathroom ? "left-3.5" : "left-0.5"}`} />
+              </span>
+              Auto bathroom
+            </button>
+          </div>
         </div>
       )}
 
@@ -169,7 +219,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [] }: Props) => {
 
           // Thursday → trash assignment
           if (date.getDay() === 4) {
-            const { tenant } = getTrashAssignment(date);
+            const { tenant } = getTrashAssignment(date, maleTenants);
             return (
               <div className="flex flex-col items-center leading-none gap-0.5">
                 <span className="text-[10px] leading-none text-orange-500 dark:text-orange-400 truncate max-w-[46px] font-semibold">
@@ -183,7 +233,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [] }: Props) => {
           // Saturday → bathroom assignment
           if (date.getDay() === 6) {
             const thursday = getThursdayOfSameWeek(date);
-            const bathroom = getBathroomAssignment(thursday);
+            const bathroom = getBathroomAssignment(thursday, bathroomTenants);
             return (
               <div className="flex flex-col items-center leading-none gap-0.5">
                 <span className="text-[10px] leading-none text-blue-400 dark:text-blue-300 truncate max-w-[46px] font-semibold">
@@ -210,7 +260,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [] }: Props) => {
           const classes: string[] = [];
 
           if (date.getDay() === 4) {
-            const { hasRecycle } = getTrashAssignment(date);
+            const { hasRecycle } = getTrashAssignment(date, maleTenants);
             const isActive = isSameDay(date, focusedThursday);
             classes.push(hasRecycle ? "thursday-recycle" : "thursday-garbage");
             if (isActive) classes.push("thursday-active");

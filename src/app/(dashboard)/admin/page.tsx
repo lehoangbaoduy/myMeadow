@@ -9,11 +9,21 @@ const AdminPage = async () => {
   const currentUser = await getCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
 
-  const [bills, tenantDobs] = await Promise.all([
+  const [bills, tenantDobs, maleTenantRows, bathroomTenantRows] = await Promise.all([
     prisma.utilityBill.findMany({ orderBy: [{ year: "asc" }, { month: "asc" }] }),
     prisma.tenant.findMany({
       where: { isActive: true, dob: { not: null } },
       select: { name: true, dob: true },
+    }),
+    prisma.tenant.findMany({
+      where: { gender: "MALE", isActive: true },
+      orderBy: { id: "asc" },
+      select: { name: true },
+    }),
+    prisma.tenant.findMany({
+      where: { bathroomDuty: true, isActive: true },
+      orderBy: { id: "asc" },
+      select: { name: true },
     }),
   ]);
 
@@ -33,7 +43,12 @@ const AdminPage = async () => {
         <DashboardContent isAdmin={isAdmin} bills={bills} latestBill={latestBill} />
       </div>
       <div className="w-full lg:w-1/3 flex flex-col gap-5">
-        <EventCalendar isAdmin={isAdmin} birthdays={birthdays} />
+        <EventCalendar
+          isAdmin={isAdmin}
+          birthdays={birthdays}
+          maleTenants={maleTenantRows.map((t) => t.name)}
+          bathroomTenants={bathroomTenantRows.map((t) => t.name)}
+        />
         <ResidentCount />
         <Annoucements isAdmin={isAdmin} />
       </div>

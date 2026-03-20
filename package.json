@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:migrate": "node scripts/turso-migrate.js"
   },
   "prisma": {
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
@@ -27,7 +28,8 @@
     "react-big-calendar": "^1.19.4",
     "react-calendar": "^6.0.0",
     "react-dom": "^18",
-    "recharts": "^3.2.1"
+    "recharts": "^3.2.1",
+    "resend": "^6.9.4"
   },
   "devDependencies": {
     "@types/node": "^20",

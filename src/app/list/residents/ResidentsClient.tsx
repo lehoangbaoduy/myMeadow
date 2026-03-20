@@ -9,8 +9,11 @@ interface TenantRow {
   dob: Date | null;
   gender: string;
   roomNumber: string | null;
+  phone: string | null;
+  email: string | null;
   notes: string | null;
   isActive: boolean;
+  bathroomDuty: boolean;
   createdAt: Date;
 }
 
@@ -34,7 +37,10 @@ interface EditForm {
   dob: string;
   gender: string;
   roomNumber: string;
+  phone: string;
+  email: string;
   notes: string;
+  bathroomDuty: boolean;
 }
 
 const inputClass =
@@ -45,7 +51,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
   const [tenants, setTenants] = useState(initialTenants);
   const [pendingMap] = useState(initialPendingMap);
   const [editingTenant, setEditingTenant] = useState<TenantRow | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ name: "", nickname: "", dob: "", gender: "MALE", roomNumber: "", notes: "" });
+  const [editForm, setEditForm] = useState<EditForm>({ name: "", nickname: "", dob: "", gender: "MALE", roomNumber: "", phone: "", email: "", notes: "", bathroomDuty: true });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -64,7 +70,10 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
       dob: t.dob ? new Date(t.dob).toISOString().split("T")[0] : "",
       gender: t.gender,
       roomNumber: t.roomNumber ?? "",
+      phone: t.phone ?? "",
+      email: t.email ?? "",
       notes: t.notes ?? "",
+      bathroomDuty: t.bathroomDuty,
     });
     setSaveError(null);
   };
@@ -86,7 +95,10 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
         dob: editForm.dob || null,
         gender: editForm.gender,
         roomNumber: editForm.roomNumber || null,
+        phone: editForm.phone || null,
+        email: editForm.email || null,
         notes: editForm.notes || null,
+        bathroomDuty: editForm.bathroomDuty,
       }),
     });
     setSaving(false);
@@ -275,8 +287,28 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                 <input type="text" value={editForm.roomNumber} onChange={updateForm("roomNumber")} className={inputClass} />
               </div>
               <div>
+                <label className={labelClass}>Phone</label>
+                <input type="tel" value={editForm.phone} onChange={updateForm("phone")} placeholder="+1 555 000 0000" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Email</label>
+                <input type="email" value={editForm.email} onChange={updateForm("email")} placeholder="tenant@example.com" className={inputClass} />
+              </div>
+              <div>
                 <label className={labelClass}>Notes</label>
                 <textarea rows={3} value={editForm.notes} onChange={updateForm("notes")} className={`${inputClass} resize-none`} />
+              </div>
+              <div className="flex items-center gap-3 py-1">
+                <input
+                  type="checkbox"
+                  id="bathroomDuty"
+                  checked={editForm.bathroomDuty}
+                  onChange={(e) => setEditForm((p) => ({ ...p, bathroomDuty: e.target.checked }))}
+                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
+                />
+                <label htmlFor="bathroomDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  Bathroom duty
+                </label>
               </div>
               {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
               <div className="flex gap-3">

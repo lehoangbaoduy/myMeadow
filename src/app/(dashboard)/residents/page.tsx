@@ -10,11 +10,21 @@ const ResidentsPage = async () => {
   const currentUser = await getCurrentUser();
   if (!currentUser) redirect("/sign-in");
 
-  const [bills, tenantDobs] = await Promise.all([
+  const [bills, tenantDobs, maleTenantRows, bathroomTenantRows] = await Promise.all([
     prisma.utilityBill.findMany({ orderBy: [{ year: "asc" }, { month: "asc" }] }),
     prisma.tenant.findMany({
       where: { isActive: true, dob: { not: null } },
       select: { name: true, dob: true },
+    }),
+    prisma.tenant.findMany({
+      where: { gender: "MALE", isActive: true },
+      orderBy: { id: "asc" },
+      select: { name: true },
+    }),
+    prisma.tenant.findMany({
+      where: { bathroomDuty: true, isActive: true },
+      orderBy: { id: "asc" },
+      select: { name: true },
     }),
   ]);
 
@@ -34,7 +44,12 @@ const ResidentsPage = async () => {
         <DashboardContent isAdmin={false} bills={bills} latestBill={latestBill} />
       </div>
       <div className="w-full lg:w-1/3 flex flex-col gap-8">
-        <EventCalendar isAdmin={false} birthdays={birthdays} />
+        <EventCalendar
+          isAdmin={false}
+          birthdays={birthdays}
+          maleTenants={maleTenantRows.map((t) => t.name)}
+          bathroomTenants={bathroomTenantRows.map((t) => t.name)}
+        />
         <ResidentCount />
         <Annoucements />
       </div>

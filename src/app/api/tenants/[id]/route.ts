@@ -43,7 +43,7 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, dob, gender, roomNumber, notes, nickname } = body;
+  const { name, dob, gender, roomNumber, phone, email, notes, nickname, bathroomDuty } = body;
 
   const updated = await prisma.tenant.update({
     where: { id: tenantId },
@@ -52,8 +52,11 @@ export async function PUT(
       ...(dob !== undefined && { dob: dob ? new Date(dob) : null }),
       ...(gender !== undefined && { gender }),
       ...(roomNumber !== undefined && { roomNumber }),
+      ...(phone !== undefined && { phone }),
+      ...(email !== undefined && { email }),
       ...(notes !== undefined && { notes }),
       ...(nickname !== undefined && { nickname }),
+      ...(isAdmin && bathroomDuty !== undefined && { bathroomDuty }),
     },
   });
 

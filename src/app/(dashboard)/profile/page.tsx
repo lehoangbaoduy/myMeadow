@@ -79,6 +79,8 @@ export default async function ProfilePage() {
             dob: tenant.dob ? new Date(tenant.dob).toISOString().split("T")[0] : "",
             gender: tenant.gender,
             roomNumber: tenant.roomNumber ?? "",
+            phone: tenant.phone ?? "",
+            email: tenant.email ?? "",
             notes: tenant.notes ?? "",
           }}
         />

@@ -9,6 +9,8 @@ interface TenantFormData {
   dob: string;
   gender: string;
   roomNumber: string;
+  phone: string;
+  email: string;
   notes: string;
 }
 
@@ -73,6 +75,8 @@ export default function TenantProfileForm({ tenantId, initial, canEdit, isAdmin,
       dob: form.dob || null,
       gender: form.gender,
       roomNumber: form.roomNumber || null,
+      phone: form.phone || null,
+      email: form.email || null,
       notes: form.notes || null,
     };
 
@@ -130,7 +134,21 @@ export default function TenantProfileForm({ tenantId, initial, canEdit, isAdmin,
         </div>
       </div>
 
-      {/* Row 3: Avatar Upload */}
+      {/* Row 3: Phone + Email */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className={labelClass}>Phone <span className="text-gray-400 normal-case">(optional)</span></label>
+          <input type="tel" value={form.phone} onChange={update("phone")} disabled={!canEdit}
+            placeholder="+1 555 000 0000" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Email <span className="text-gray-400 normal-case">(optional)</span></label>
+          <input type="email" value={form.email} onChange={update("email")} disabled={!canEdit}
+            placeholder="you@example.com" className={inputClass} />
+        </div>
+      </div>
+
+      {/* Row 4: Avatar Upload */}
       {canEdit && (
         <div className="mb-4">
           <label className={labelClass}>Profile Photo <span className="text-gray-400 normal-case">(optional)</span></label>
