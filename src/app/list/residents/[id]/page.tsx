@@ -78,6 +78,8 @@ export default async function TenantProfilePage({
               : "",
             gender: tenant.gender,
             roomNumber: tenant.roomNumber ?? "",
+            phone: tenant.phone ?? "",
+            email: tenant.email ?? "",
             notes: tenant.notes ?? "",
           }}
         />
