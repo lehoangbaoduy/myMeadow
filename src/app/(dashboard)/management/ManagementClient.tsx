@@ -1,0 +1,350 @@
+"use client";
+
+import { useState } from "react";
+import {
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+} from "recharts";
+
+// ── Configuration ──────────────────────────────────────────
+const MORTGAGE = 2000;
+
+const RENT = {
+  duongNgan: 600,
+  cuong: 500,
+  khaoThao: 550,
+};
+
+// Updated: Nhi = 0.5 shares → total = 6.5
+const TOTAL_SHARES = 6.5;
+const UTILITY_SHARES = {
+  duongNgan: 2 / TOTAL_SHARES,
+  cuong:     1 / TOTAL_SHARES,
+  khaoThao:  2 / TOTAL_SHARES,  // Khoa + Thảo = 2
+  bao:       1 / TOTAL_SHARES,
+  nhi:       0.5 / TOTAL_SHARES,
+};
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const PIE_COLORS = ["#F97316","#3B82F6","#10B981","#EF4444","#8B5CF6","#F59E0B"];
+
+interface UtilityBill {
+  month: number; year: number;
+  electric: number; gas: number; water: number; wifi: number;
+}
+
+interface Row { label: string; sign: "+" | "-"; amount: number; }
+
+function calcGross(bill: UtilityBill | null) {
+  const totalUtil = bill ? bill.electric + bill.gas + bill.water + bill.wifi : 0;
+
+  const expenses: Row[] = [
+    { label: "Mortgage",  sign: "-", amount: MORTGAGE },
+    { label: "Electric",  sign: "-", amount: bill?.electric ?? 0 },
+    { label: "Gas",       sign: "-", amount: bill?.gas ?? 0 },
+    { label: "Water",     sign: "-", amount: bill?.water ?? 0 },
+    { label: "WiFi",      sign: "-", amount: bill?.wifi ?? 0 },
+  ];
+
+  const incomes: Row[] = [
+    { label: "Dương & Ngân — Rent",       sign: "+", amount: RENT.duongNgan },
+    { label: "Dương & Ngân — Utils 2/6.5",sign: "+", amount: totalUtil * UTILITY_SHARES.duongNgan },
+    { label: "Cường — Rent",              sign: "+", amount: RENT.cuong },
+    { label: "Cường — Utils 1/6.5",       sign: "+", amount: totalUtil * UTILITY_SHARES.cuong },
+    { label: "Khoa & Thảo — Rent",        sign: "+", amount: RENT.khaoThao },
+    { label: "Khoa & Thảo — Utils 2/6.5", sign: "+", amount: totalUtil * UTILITY_SHARES.khaoThao },
+    { label: "Bảo — Utils 1/6.5",         sign: "+", amount: totalUtil * UTILITY_SHARES.bao },
+    { label: "Nhi — Utils 0.5/6.5",       sign: "+", amount: totalUtil * UTILITY_SHARES.nhi },
+  ];
+
+  const rows = [...incomes, ...expenses];
+  const gross = rows.reduce((sum, r) => r.sign === "+" ? sum + r.amount : sum - r.amount, 0);
+  return { rows, gross, expenses };
+}
+
+export default function ManagementClient() {
+  const today = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [bill, setBill] = useState<UtilityBill | null>(null);
+  const [yearlyBills, setYearlyBills] = useState<(UtilityBill | null)[]>([]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setSubmitted(false);
+
+    const res = await fetch(`/api/utilities?month=${selectedMonth}&year=${selectedYear}`);
+    const allBills: UtilityBill[] = res.ok ? await res.json() : [];
+    setBill(allBills.find((b) => b.month === selectedMonth && b.year === selectedYear) ?? null);
+
+    const yearly: (UtilityBill | null)[] = [];
+    for (let m = 1; m <= 12; m++) {
+      yearly.push(allBills.find((b) => b.month === m && b.year === selectedYear) ?? null);
+    }
+    setYearlyBills(yearly);
+    setLoading(false);
+    setSubmitted(true);
+  };
+
+  const years = Array.from({ length: 5 }, (_, i) => today.getFullYear() - 2 + i);
+
+  const { rows, gross, expenses } = calcGross(bill);
+  const pieData = expenses.map((e) => ({ name: e.label, value: parseFloat(e.amount.toFixed(2)) }));
+  const totalExpenses = pieData.reduce((s, d) => s + d.value, 0);
+
+  const yearlyGross = yearlyBills.map((b, idx) => {
+    const isFuture = new Date(selectedYear, idx, 1) > today;
+    if (isFuture) return { month: MONTHS[idx], gross: 0, grossAbs: 0, isPositive: true, future: true };
+    const g = parseFloat(calcGross(b).gross.toFixed(2));
+    return { month: MONTHS[idx], gross: g, grossAbs: Math.abs(g), isPositive: g >= 0, future: false };
+  });
+  const totalYearlyGross = yearlyGross.reduce((s, m) => s + m.gross, 0);
+  const lineData = yearlyGross.filter((m) => !m.future);
+
+  const fmt = (n: number) =>
+    n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+
+  const inputClass = "px-3 py-2 rounded-lg border border-meadowBorder dark:border-darkBorder bg-white dark:bg-darkSurface text-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-meadowOrange/40 transition-all";
+
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Financial Management</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Track income, expenses, and gross profit</p>
+      </div>
+
+      {/* Selector */}
+      <div className="bg-white dark:bg-darkCard rounded-2xl border border-meadowBorder dark:border-darkBorder p-5 mb-8 inline-flex flex-wrap items-end gap-4 shadow-[var(--shadow-card)]">
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Month</label>
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className={inputClass}>
+            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Year</label>
+          <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className={inputClass}>
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <button onClick={handleSubmit} disabled={loading}
+          className="px-6 py-2 bg-meadowOrange hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 shadow-sm">
+          {loading ? "Loading…" : "Calculate"}
+        </button>
+      </div>
+
+      {submitted && (
+        <>
+          {/* ── Section 1 ── */}
+          <section className="mb-10">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">
+              {MONTHS[selectedMonth - 1]} {selectedYear} — Monthly Breakdown
+            </h2>
+            {!bill && (
+              <div className="text-sm text-amber-700 dark:text-amber-400 mb-4 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50">
+                ⚠️ No utility bill data for this month. Utility amounts shown as $0.
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-[7fr_3fr] gap-6">
+              {/* Breakdown table */}
+              <div className="bg-white dark:bg-darkCard rounded-2xl border border-meadowBorder dark:border-darkBorder overflow-hidden self-start shadow-[var(--shadow-card)]">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-meadowLight dark:bg-darkSurface text-gray-500 dark:text-gray-400 text-left">
+                      <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wide">Description</th>
+                      <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wide text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, i) => (
+                      <tr key={i} className="border-t border-meadowBorder dark:border-darkBorder">
+                        <td className="px-5 py-2.5 text-gray-700 dark:text-gray-300">{row.label}</td>
+                        <td className={`px-5 py-2.5 text-right font-semibold ${
+                          row.sign === "+" ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
+                        }`}>
+                          {row.sign}{fmt(row.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-meadowOrange bg-meadowMuted/30 dark:bg-darkBorder/20">
+                      <td className="px-5 py-3.5 font-bold text-gray-900 dark:text-gray-100">Total Gross Income</td>
+                      <td className={`px-5 py-3.5 text-right font-bold text-lg ${
+                        gross >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
+                      }`}>
+                        {fmt(gross)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pie chart — full height, bigger */}
+              <div className="bg-white dark:bg-darkCard rounded-2xl border border-meadowBorder dark:border-darkBorder p-5 flex flex-col shadow-[var(--shadow-card)]">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Expense Breakdown
+                </h3>
+                <div className="relative flex-1 min-h-[380px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <Pie
+                        data={pieData}
+                        cx="50%" cy="50%"
+                        innerRadius="38%" outerRadius="62%"
+                        paddingAngle={2}
+                        dataKey="value"
+                        labelLine={{ stroke: "#94a3b8", strokeWidth: 1 }}
+                        label={({ name, cx, cy, midAngle, outerRadius }) => {
+                          const RADIAN = Math.PI / 180;
+                          const radius = (outerRadius as number) + 30;
+                          const x = (cx as number) + radius * Math.cos(-midAngle * RADIAN);
+                          const y = (cy as number) + radius * Math.sin(-midAngle * RADIAN);
+                          return (
+                            <text x={x} y={y} textAnchor={x > (cx as number) ? "start" : "end"} dominantBaseline="central" fontSize={10} fill="#6b7280" fontWeight={500}>
+                              {name}
+                            </text>
+                          );
+                        }}
+                      >
+                        {pieData.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-center">
+                      <div className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                        {fmt(totalExpenses)}
+                      </div>
+                      <div className="text-[10px] text-gray-400 mt-0.5 font-medium uppercase tracking-wide">Total</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Section 2 ── */}
+          <section>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">
+              {selectedYear} — Annual Summary
+            </h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[7fr_3fr] gap-6">
+              {/* Year table */}
+              <div className="bg-white dark:bg-darkCard rounded-2xl border border-meadowBorder dark:border-darkBorder overflow-hidden self-start shadow-[var(--shadow-card)]">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-meadowLight dark:bg-darkSurface text-gray-500 dark:text-gray-400 text-left">
+                      <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wide">Month</th>
+                      <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wide text-right">Gross Income</th>
+                      <th className="px-5 py-3.5 font-semibold text-xs uppercase tracking-wide">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {yearlyGross.map((row, i) => (
+                      <tr key={i} className={`border-t border-meadowBorder dark:border-darkBorder ${
+                        i + 1 === selectedMonth ? "bg-meadowMuted/30 dark:bg-darkBorder/20" : ""
+                      }`}>
+                        <td className="px-5 py-2.5 font-medium text-gray-800 dark:text-gray-100">
+                          {row.month}
+                          {i + 1 === selectedMonth && (
+                            <span className="ml-2 text-xs text-meadowOrange font-semibold">← selected</span>
+                          )}
+                        </td>
+                        <td className={`px-5 py-2.5 text-right font-semibold ${
+                          row.future ? "text-gray-400" :
+                          row.gross >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
+                        }`}>
+                          {row.future ? "—" : fmt(row.gross)}
+                        </td>
+                        <td className="px-5 py-2.5 text-xs text-gray-400">
+                          {row.future ? "Future" : yearlyBills[i] ? "" : "No bill data"}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-meadowOrange bg-meadowMuted/30 dark:bg-darkBorder/20">
+                      <td className="px-5 py-3.5 font-bold text-gray-900 dark:text-gray-100">Total {selectedYear}</td>
+                      <td className={`px-5 py-3.5 text-right font-bold text-lg ${
+                        totalYearlyGross >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
+                      }`}>
+                        {fmt(totalYearlyGross)}
+                      </td>
+                      <td className="px-5 py-3.5 text-xs text-gray-400 font-medium">YTD</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Bar + Line chart — gross income over the year */}
+              <div className="bg-white dark:bg-darkCard rounded-2xl border border-meadowBorder dark:border-darkBorder p-5 flex flex-col shadow-[var(--shadow-card)]">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Monthly Income Trend
+                </h3>
+                {/* Legend */}
+                <div className="flex items-center gap-4 mb-3 text-xs text-gray-400">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" />Positive
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block" />Negative
+                  </span>
+                </div>
+                <div className="flex-1 min-h-[360px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={lineData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: "#94a3b8" }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
+                        width={46}
+                      />
+                      <Tooltip
+                        formatter={(v: number, name: string) => {
+                          if (name === "Gross") return [fmt(v > 0 ? v : -v), "Gross Income"];
+                          return [fmt(v), name];
+                        }}
+                        contentStyle={{ borderRadius: "12px", fontSize: "12px" }}
+                      />
+                      {/* Bars colored green/red based on actual gross sign */}
+                      <Bar dataKey="grossAbs" radius={[5, 5, 0, 0]} barSize={22} isAnimationActive={false}>
+                        {lineData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={entry.isPositive ? "#34d399" : "#f87171"}
+                          />
+                        ))}
+                      </Bar>
+                      <Line
+                        type="monotone"
+                        dataKey="grossAbs"
+                        stroke="#F97316"
+                        strokeWidth={2.5}
+                        dot={{ fill: "#F97316", r: 4, strokeWidth: 0 }}
+                        activeDot={{ r: 6 }}
+                        name="Gross"
+                        isAnimationActive={false}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-400 mt-3">
+              Mortgage = ${MORTGAGE.toLocaleString()}/mo · Shares (6.5 total): Dương+Ngân 2 · Cường 1 · Khoa+Thảo 2 · Bảo 1 · Nhi 0.5
+            </p>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}

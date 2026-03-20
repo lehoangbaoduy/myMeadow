@@ -1,0 +1,144 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  TENANT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+model User {
+  id                   Int            @id @default(autoincrement())
+  clerkId              String         @unique
+  role                 Role           @default(TENANT)
+  registrationComplete Boolean        @default(false)
+  tenant               Tenant?
+  notifications        Notification[]
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+model Tenant {
+  id                  Int                  @id @default(autoincrement())
+  name                String
+  nickname            String?
+  avatarData          Bytes?
+  avatarMimeType      String?
+  isActive            Boolean              @default(true)
+  dob                 DateTime?
+  gender              Gender
+  phone               String?
+  roomNumber          String?
+  notes               String?
+  userId              Int                  @unique
+  user                User                 @relation(fields: [userId], references: [id])
+  trashAssignments    TrashAssignment[]
+  maintenanceRequests MaintenanceRequest[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model UtilityBill {
+  id            Int      @id @default(autoincrement())
+  month         Int
+  year          Int
+  electric      Float    @default(0)
+  electricUsage Float?
+  electricPrice Float?
+  gas           Float    @default(0)
+  gasUsage      Float?
+  gasPrice      Float?
+  water         Float    @default(0)
+  waterUsage    Float?
+  waterPrice    Float?
+  wifi          Float    @default(0)
+  wifiPrice     Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([month, year])
+}
+
+model UtilityDocument {
+  id            Int       @id @default(autoincrement())
+  month         Int
+  year          Int
+  utilityType   String
+  fileName      String
+  filePath      String
+  billStartDate DateTime?
+  billEndDate   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([month, year, utilityType])
+}
+
+model MaintenanceRequest {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  requestType String
+  description String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TrashAssignment {
+  id         Int      @id @default(autoincrement())
+  date       DateTime
+  tenantId   Int
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  isRecycle  Boolean  @default(false)
+  isOverride Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  fromName  String
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model InventoryItem {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  category  String
+  icon      String?
+  level     Float    @default(1.0)
+  isCustom  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InventoryRunOut {
+  id         Int      @id @default(autoincrement())
+  itemName   String
+  resolved   Boolean  @default(false)
+  reportedAt DateTime @default(now())
+}

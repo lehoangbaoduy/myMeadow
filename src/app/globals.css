@@ -1,3 +1,370 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Base / Typography ────────────────────────────────────── */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-meadowLight dark:bg-darkBg text-gray-900 dark:text-gray-100;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  * {
+    transition-property: background-color, border-color;
+    transition-duration: 200ms;
+    transition-timing-function: ease;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-darkBorder rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-600;
+  }
+}
+
+/* ── Design tokens ───────────────────────────────────────── */
+:root {
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 4px 14px rgba(0, 0, 0, 0.09), 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.dark {
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.7), 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* ── react-calendar: light ───────────────────────────────── */
+.react-calendar {
+  width: 100% !important;
+  border: none !important;
+  font-family: "Inter", sans-serif !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: 0.85rem !important;
+}
+
+.react-calendar__navigation__label__labelText {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.react-calendar__tile--active {
+  background-color: #f97316 !important;
+  color: white !important;
+  border-radius: 8px !important;
+}
+
+.react-calendar__tile--now {
+  background-color: #fff0e0 !important;
+  border-radius: 8px !important;
+}
+
+.react-calendar__tile:hover {
+  background-color: #ffedd5 !important;
+  border-radius: 8px !important;
+}
+
+/* ── Thursday highlights ─────────────────────────────────── */
+.react-calendar__tile.thursday-recycle {
+  background-color: #dcfce7 !important;
+  border-radius: 8px !important;
+}
+
+.dark .react-calendar__tile.thursday-recycle {
+  background-color: #14532d55 !important;
+}
+
+.react-calendar__tile--active.thursday-recycle {
+  background-color: #16a34a !important;
+  color: white !important;
+}
+
+.dark .react-calendar__tile--active.thursday-recycle {
+  background-color: #16a34a !important;
+}
+
+/* ── Birthday highlight ──────────────────────────────────── */
+.react-calendar__tile.birthday-tile {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 30, 100, 0.45) 0%,
+    rgba(255, 140, 0, 0.45) 25%,
+    rgba(40, 180, 80, 0.45) 50%,
+    rgba(0, 130, 255, 0.45) 75%,
+    rgba(150, 50, 255, 0.45) 100%
+  ) !important;
+  border-radius: 8px !important;
+  outline: 2px solid rgba(255, 80, 150, 0.6) !important;
+  outline-offset: -1px !important;
+}
+
+.dark .react-calendar__tile.birthday-tile {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 50, 120, 0.55) 0%,
+    rgba(255, 160, 0, 0.55) 25%,
+    rgba(60, 200, 100, 0.55) 50%,
+    rgba(0, 160, 255, 0.55) 75%,
+    rgba(170, 70, 255, 0.55) 100%
+  ) !important;
+  outline: 2px solid rgba(255, 100, 180, 0.7) !important;
+}
+
+/* ── react-calendar: dark ────────────────────────────────── */
+.dark .react-calendar {
+  background: transparent !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .react-calendar__navigation button {
+  color: #f1f5f9 !important;
+}
+
+.dark .react-calendar__navigation button:hover,
+.dark .react-calendar__navigation button:focus {
+  background-color: #1c2437 !important;
+  border-radius: 6px !important;
+}
+
+.dark .react-calendar__month-view__weekdays {
+  color: #64748b !important;
+}
+
+.dark .react-calendar__tile {
+  color: #f1f5f9 !important;
+}
+
+.dark .react-calendar__tile:hover {
+  background-color: #1c2437 !important;
+  border-radius: 8px !important;
+}
+
+.dark .react-calendar__tile--now {
+  background-color: #1c2437 !important;
+  border-radius: 8px !important;
+}
+
+.dark .react-calendar__tile--active {
+  background-color: #f97316 !important;
+  color: white !important;
+  border-radius: 8px !important;
+}
+
+.dark .react-calendar__month-view__days__day--neighboringMonth {
+  color: #334155 !important;
+}
+
+/* ── react-big-calendar ──────────────────────────────────── */
+.rbc-btn-group:first-child {
+  display: none !important;
+}
+
+.rbc-toolbar-label {
+  text-align: right !important;
+  padding: 0px 20px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #1e293b;
+}
+
+.dark .rbc-toolbar-label {
+  color: #f1f5f9 !important;
+}
+
+.rbc-btn-group:last-child {
+  font-size: 13px !important;
+}
+
+.rbc-btn-group:last-child button {
+  border: none !important;
+  background-color: #f1f0ff !important;
+  margin-left: 2px !important;
+  border-radius: 6px !important;
+}
+
+.dark .rbc-btn-group:last-child button {
+  background-color: #1c2437 !important;
+  color: #94a3b8 !important;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #dbdafe !important;
+  box-shadow: none !important;
+}
+
+.dark .rbc-toolbar button.rbc-active {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Calendar view: Month */
+.rbc-month-view {
+  border-color: #dde3eb !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.dark .rbc-month-view {
+  border-color: #2a3650 !important;
+}
+
+.rbc-header {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 10px 4px !important;
+  color: #475569 !important;
+  background-color: #f5f8fc !important;
+  border-color: #dde3eb !important;
+}
+
+.dark .rbc-header {
+  color: #94a3b8 !important;
+  background-color: #111827 !important;
+  border-color: #2a3650 !important;
+}
+
+.rbc-date-cell {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 6px 8px !important;
+  color: #374151 !important;
+}
+
+.dark .rbc-date-cell {
+  color: #cbd5e1 !important;
+}
+
+.rbc-off-range-bg {
+  background-color: #f8fafc !important;
+}
+
+.dark .rbc-off-range-bg {
+  background-color: #0f1629 !important;
+}
+
+.rbc-today {
+  background-color: #fff7ed !important;
+}
+
+.dark .rbc-today {
+  background-color: #1e2a40 !important;
+}
+
+.rbc-day-bg {
+  background-color: #ffffff !important;
+}
+
+.dark .rbc-day-bg {
+  background-color: #1c2437 !important;
+}
+
+.rbc-month-row + .rbc-month-row {
+  border-color: #dde3eb !important;
+}
+
+.dark .rbc-month-row + .rbc-month-row {
+  border-color: #2a3650 !important;
+}
+
+.rbc-day-bg + .rbc-day-bg {
+  border-color: #dde3eb !important;
+}
+
+.dark .rbc-day-bg + .rbc-day-bg {
+  border-color: #2a3650 !important;
+}
+
+.rbc-event {
+  border: none !important;
+  border-radius: 5px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 2px 6px !important;
+}
+
+.rbc-event-content {
+  font-size: 12px !important;
+}
+
+/* Day view */
+.rbc-time-view {
+  border-color: #dde3eb !important;
+  border-radius: 8px !important;
+}
+
+.dark .rbc-time-view {
+  border-color: #2a3650 !important;
+}
+
+.rbc-time-header {
+  display: none !important;
+}
+
+.rbc-time-content {
+  border: none !important;
+}
+
+.rbc-time-gutter.rbc-time-column {
+  font-size: 12px !important;
+}
+
+.rbc-time-gutter.rbc-time-column .rbc-timeslot-group {
+  padding: 0px 20px !important;
+}
+
+.rbc-timeslot-group {
+  background-color: #f7fdff !important;
+}
+
+.dark .rbc-timeslot-group {
+  background-color: #111827 !important;
+}
+
+.rbc-day-slot {
+  font-size: 14px !important;
+}
+
+.rbc-day-slot .rbc-event {
+  color: #1e293b !important;
+  padding: 10px !important;
+  margin: 10px !important;
+  width: 99% !important;
+}
+
+.rbc-event:nth-child(1) { background-color: #e0f2fe !important; }
+.rbc-event:nth-child(2) { background-color: #fef9c3 !important; }
+.rbc-event:nth-child(3) { background-color: #f3f0ff !important; }
+.rbc-event:nth-child(4) { background-color: #fdf2fb !important; }
+.rbc-event:nth-child(5) { background-color: #e0f2fe !important; }
+.rbc-event:nth-child(6) { background-color: #fef9c3 !important; }
+.rbc-event:nth-child(7) { background-color: #f3f0ff !important; }
+.rbc-event:nth-child(8) { background-color: #fdf2fb !important; }
+
+.rbc-event-label {
+  color: #64748b !important;
+  font-size: 11px !important;
+  margin-bottom: 3px;
+}
