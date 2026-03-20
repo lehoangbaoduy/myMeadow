@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, age, dob, gender, roomNumber, notes, clerkId } = body;
+  const { name, dob, gender, roomNumber, notes, clerkId } = body;
 
   if (!name || !gender) {
     return NextResponse.json({ error: "name and gender are required" }, { status: 400 });
@@ -44,7 +44,6 @@ export async function POST(req: NextRequest) {
   const tenant = await prisma.tenant.create({
     data: {
       name,
-      age: age ?? null,
       dob: dob ? new Date(dob) : null,
       gender,
       roomNumber: roomNumber ?? null,
