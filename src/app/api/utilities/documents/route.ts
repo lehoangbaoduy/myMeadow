@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const blobKey = `utility-docs/${year}-${String(month).padStart(2, "0")}-${utilityType}-${Date.now()}-${sanitizedName}`;
 
-  const blob = await put(blobKey, file, { access: "public" });
+  const blob = await put(blobKey, file, { access: "private" });
 
   // Remove old file if exists
   const existing = await prisma.utilityDocument.findUnique({

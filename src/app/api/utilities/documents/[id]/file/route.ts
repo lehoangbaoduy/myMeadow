@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { generateDownloadUrl } from "@vercel/blob";
 
 export async function GET(
   _req: NextRequest,
@@ -14,5 +15,6 @@ export async function GET(
   });
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  return NextResponse.redirect(doc.filePath);
+  const downloadUrl = await generateDownloadUrl(doc.filePath);
+  return NextResponse.redirect(downloadUrl);
 }
