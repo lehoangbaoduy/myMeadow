@@ -14,6 +14,7 @@ interface TenantRow {
   notes: string | null;
   isActive: boolean;
   bathroomDuty: boolean;
+  rentAmount: number | null;
   createdAt: Date;
 }
 
@@ -41,6 +42,7 @@ interface EditForm {
   email: string;
   notes: string;
   bathroomDuty: boolean;
+  rentAmount: string;
 }
 
 const inputClass =
@@ -51,7 +53,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
   const [tenants, setTenants] = useState(initialTenants);
   const [pendingMap] = useState(initialPendingMap);
   const [editingTenant, setEditingTenant] = useState<TenantRow | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ name: "", nickname: "", dob: "", gender: "MALE", roomNumber: "", phone: "", email: "", notes: "", bathroomDuty: true });
+  const [editForm, setEditForm] = useState<EditForm>({ name: "", nickname: "", dob: "", gender: "MALE", roomNumber: "", phone: "", email: "", notes: "", bathroomDuty: true, rentAmount: "" });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -74,6 +76,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
       email: t.email ?? "",
       notes: t.notes ?? "",
       bathroomDuty: t.bathroomDuty,
+      rentAmount: t.rentAmount != null ? String(t.rentAmount) : "",
     });
     setSaveError(null);
   };
@@ -99,6 +102,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
         email: editForm.email || null,
         notes: editForm.notes || null,
         bathroomDuty: editForm.bathroomDuty,
+        rentAmount: editForm.rentAmount === "" ? null : Number(editForm.rentAmount),
       }),
     });
     setSaving(false);
@@ -297,6 +301,10 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
               <div>
                 <label className={labelClass}>Notes</label>
                 <textarea rows={3} value={editForm.notes} onChange={updateForm("notes")} className={`${inputClass} resize-none`} />
+              </div>
+              <div>
+                <label className={labelClass}>Monthly Rent ($)</label>
+                <input type="number" min={0} step={0.01} value={editForm.rentAmount} onChange={updateForm("rentAmount")} placeholder="Leave blank to disable rent reminders" className={inputClass} />
               </div>
               <div className="flex items-center gap-3 py-1">
                 <input

@@ -44,6 +44,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File size must be under 20MB" }, { status: 400 });
   }
 
+  const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  const isPdfMagicBytes = String.fromCharCode.apply(null, Array.from(header)) === "%PDF-";
+  if (!isPdfMagicBytes) {
+    return NextResponse.json({ error: "File is not a valid PDF" }, { status: 400 });
+  }
+
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const blobKey = `utility-docs/${year}-${String(month).padStart(2, "0")}-${utilityType}-${Date.now()}-${sanitizedName}`;
 

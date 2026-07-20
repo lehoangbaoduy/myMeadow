@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+
+const financialFieldsSchema = z.object({
+  utilityShare: z.number().finite().nonnegative().optional(),
+  rentAmount: z.number().finite().nonnegative().nullable().optional(),
+});
 
 async function getCallerUser(clerkId: string) {
   return prisma.user.findUnique({
@@ -45,6 +51,15 @@ export async function PUT(
   const body = await req.json();
   const { name, dob, gender, roomNumber, phone, email, notes, nickname, bathroomDuty } = body;
 
+  const financialParsed = financialFieldsSchema.safeParse({
+    utilityShare: body.utilityShare,
+    rentAmount: body.rentAmount,
+  });
+  if (!financialParsed.success) {
+    return NextResponse.json({ error: "utilityShare and rentAmount must be non-negative numbers" }, { status: 400 });
+  }
+  const { utilityShare, rentAmount } = financialParsed.data;
+
   const updated = await prisma.tenant.update({
     where: { id: tenantId },
     data: {
@@ -57,6 +72,8 @@ export async function PUT(
       ...(notes !== undefined && { notes }),
       ...(nickname !== undefined && { nickname }),
       ...(isAdmin && bathroomDuty !== undefined && { bathroomDuty }),
+      ...(isAdmin && utilityShare !== undefined && { utilityShare }),
+      ...(isAdmin && rentAmount !== undefined && { rentAmount }),
     },
   });
 

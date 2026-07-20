@@ -41,10 +41,14 @@ model Tenant {
   roomNumber          String?
   notes               String?
   bathroomDuty        Boolean              @default(false)
+  utilityShare        Float                @default(1)
+  rentAmount          Float?
   userId              Int                  @unique
   user                User                 @relation(fields: [userId], references: [id])
   trashAssignments    TrashAssignment[]
+  dishesAssignments   DishesAssignment[]
   maintenanceRequests MaintenanceRequest[]
+  rentReminderLogs    RentReminderLog[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -106,6 +110,27 @@ model TrashAssignment {
   isOverride Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model DishesAssignment {
+  id         Int      @id @default(autoincrement())
+  date       DateTime
+  tenantId   Int
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  isOverride Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model RentReminderLog {
+  id       Int      @id @default(autoincrement())
+  tenantId Int
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  month    Int
+  year     Int
+  sentAt   DateTime @default(now())
+
+  @@unique([tenantId, month, year])
 }
 
 model Announcement {

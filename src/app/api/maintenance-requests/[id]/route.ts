@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+
+const patchSchema = z.object({
+  status: z.enum(["PENDING", "RESOLVED"]),
+});
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const { userId } = await auth();
@@ -11,12 +16,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { status } = await req.json();
-  if (!status) return NextResponse.json({ error: "status is required" }, { status: 400 });
+  const parsed = patchSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "status must be PENDING or RESOLVED" }, { status: 400 });
+  }
 
   const updated = await prisma.maintenanceRequest.update({
     where: { id: Number(params.id) },
-    data: { status },
+    data: { status: parsed.data.status },
   });
 
   return NextResponse.json(updated);

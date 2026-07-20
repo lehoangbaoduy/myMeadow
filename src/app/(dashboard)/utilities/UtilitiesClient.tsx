@@ -28,11 +28,18 @@ interface ReviewForm {
   billStart: string; billEnd: string;
   amount: string; usage: string; price: string;
 }
+interface TenantShareRow {
+  id: number;
+  name: string;
+  utilityShare: number;
+}
 interface Props {
   isAdmin: boolean;
   bills: BillRow[];
   documents: DocRow[];
   tenantName: string | null;
+  tenantId: number | null;
+  tenants: TenantShareRow[];
   currentMonth: number;
   currentYear: number;
 }
@@ -55,20 +62,6 @@ function fmtLabel(month: number, year: number) {
 function fmtDate(d: string | null | undefined): string {
   if (!d) return "";
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-// Bill split shares
-const SHARE_MAP: Record<string, number> = {
-  "Cường": 1, "Bảo": 1, "Nhi": 0.5, "Khoa": 1, "Thảo": 1, "Ngân": 0, "Dương": 2,
-};
-const TOTAL_SHARES = Object.values(SHARE_MAP).reduce((a, b) => a + b, 0);
-
-function getShareForName(name: string | null): number {
-  if (!name) return 1;
-  for (const [key, val] of Object.entries(SHARE_MAP)) {
-    if (name.toLowerCase().includes(key.toLowerCase())) return val;
-  }
-  return 1;
 }
 
 // ─── 3-dot menu ───────────────────────────────────────────────────────────────
@@ -119,10 +112,13 @@ const selectClass = "px-2 py-1.5 rounded-md border border-meadowBorder dark:bord
 
 type UtilType = "electric" | "gas" | "water" | "wifi";
 
-export default function UtilitiesClient({ isAdmin, bills, documents, tenantName, currentMonth, currentYear }: Props) {
+export default function UtilitiesClient({ isAdmin, bills, documents, tenantName, tenantId, tenants, currentMonth, currentYear }: Props) {
   const [utilType, setUtilType] = useState<UtilType>("electric");
   const [allBills, setAllBills] = useState(bills);
   const [allDocs, setAllDocs] = useState(documents);
+  const [allTenants, setAllTenants] = useState(tenants);
+  const [shareDraft, setShareDraft] = useState<Record<number, string>>({});
+  const [savingShareId, setSavingShareId] = useState<number | null>(null);
 
   // Chart year filter (Billing History + Usage History)
   const [chartYear, setChartYear] = useState(currentYear);
@@ -173,8 +169,24 @@ export default function UtilitiesClient({ isAdmin, bills, documents, tenantName,
   // Bill selected for split/document view
   const splitBill = billMap.get(`${splitMonth}-${splitYear}`) ?? null;
   const splitBillAmount = splitBill ? ((splitBill[utilType as keyof BillRow] as number) ?? 0) : 0;
-  const myShare = getShareForName(tenantName);
-  const myBill = TOTAL_SHARES > 0 ? (splitBillAmount * myShare) / TOTAL_SHARES : 0;
+  const totalShares = allTenants.reduce((sum, t) => sum + t.utilityShare, 0);
+  const myShare = allTenants.find((t) => t.id === tenantId)?.utilityShare ?? 1;
+  const myBill = totalShares > 0 ? (splitBillAmount * myShare) / totalShares : 0;
+
+  const handleShareSave = async (tenant: TenantShareRow, rawValue: string) => {
+    const value = Number(rawValue);
+    if (!Number.isFinite(value) || value < 0) return;
+    setSavingShareId(tenant.id);
+    const res = await fetch(`/api/tenants/${tenant.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ utilityShare: value }),
+    });
+    if (res.ok) {
+      setAllTenants((prev) => prev.map((t) => (t.id === tenant.id ? { ...t, utilityShare: value } : t)));
+    }
+    setSavingShareId(null);
+  };
 
   // Document for selected split month/year/utilType
   const splitDoc = allDocs.find(
@@ -483,7 +495,7 @@ export default function UtilitiesClient({ isAdmin, bills, documents, tenantName,
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
               {fmtLabel(splitBill.month, splitBill.year)} · Total:{" "}
               <span className="font-semibold text-gray-700 dark:text-gray-300">${splitBillAmount.toFixed(2)}</span>
-              {" "}· {TOTAL_SHARES} shares total
+              {" "}· {totalShares} shares total
             </p>
           ) : (
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
@@ -500,7 +512,7 @@ export default function UtilitiesClient({ isAdmin, bills, documents, tenantName,
           ) : (
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Period: not specified</p>
           )}
-          {tenantName && splitBill && (
+          {tenantId != null && splitBill && (
             <div className="mb-4 px-4 py-3 rounded-xl bg-gradient-to-r from-meadowMuted to-orange-100/50 dark:from-darkBorder dark:to-darkBorder/50 border border-orange-200/50 dark:border-darkBorder">
               <p className="text-xs text-gray-600 dark:text-gray-400">Your share ({myShare} share{myShare !== 1 ? "s" : ""})</p>
               <p className="text-2xl font-bold text-meadowOrange mt-0.5">${myBill.toFixed(2)}</p>
@@ -515,21 +527,42 @@ export default function UtilitiesClient({ isAdmin, bills, documents, tenantName,
               </tr>
             </thead>
             <tbody>
-              {Object.entries(SHARE_MAP).map(([name, shares]) => {
-                const amt = splitBill && TOTAL_SHARES > 0 ? (splitBillAmount * shares) / TOTAL_SHARES : null;
-                const isMe = tenantName && name.toLowerCase() === tenantName.toLowerCase();
+              {allTenants.map((t) => {
+                const shares = t.utilityShare;
+                const amt = splitBill && totalShares > 0 ? (splitBillAmount * shares) / totalShares : null;
+                const isMe = tenantId === t.id;
                 return (
-                  <tr key={name} className={`border-t border-meadowBorder/50 dark:border-darkBorder/50 ${isMe ? "bg-meadowMuted/50 dark:bg-darkBorder/30 rounded-lg" : ""}`}>
+                  <tr key={t.id} className={`border-t border-meadowBorder/50 dark:border-darkBorder/50 ${isMe ? "bg-meadowMuted/50 dark:bg-darkBorder/30 rounded-lg" : ""}`}>
                     <td className={`py-2.5 ${isMe ? "font-semibold text-meadowOrange" : "text-gray-700 dark:text-gray-300"}`}>
-                      {name} {isMe ? "(you)" : ""}
+                      {t.name} {isMe ? "(you)" : ""}
                     </td>
-                    <td className="py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">{shares}</td>
+                    <td className="py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">
+                      {isAdmin ? (
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          disabled={savingShareId === t.id}
+                          value={shareDraft[t.id] ?? String(shares)}
+                          onChange={(e) => setShareDraft((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                          onBlur={(e) => handleShareSave(t, e.target.value)}
+                          className="w-16 px-1.5 py-1 text-center rounded-md border border-meadowBorder dark:border-darkBorder bg-white dark:bg-darkSurface text-gray-700 dark:text-gray-300 text-xs focus:outline-none focus:ring-2 focus:ring-meadowOrange/40"
+                        />
+                      ) : (
+                        shares
+                      )}
+                    </td>
                     <td className={`py-2.5 text-right font-medium ${shares === 0 || amt == null ? "text-gray-400" : "text-gray-700 dark:text-gray-300"}`}>
                       {shares === 0 || amt == null ? "—" : `$${amt.toFixed(2)}`}
                     </td>
                   </tr>
                 );
               })}
+              {allTenants.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="py-4 text-center text-gray-400 text-xs">No active residents</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

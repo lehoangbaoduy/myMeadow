@@ -7,6 +7,7 @@ import {
   getThursdayOfWeek,
   getThursdaysInMonth,
 } from "@/lib/trash-schedule";
+import { getWeekIndex as getDishesWeekIndex, getSundayOfWeek } from "@/lib/dishes-schedule";
 
 type ValuePiece = Date | null;
 type Value = ValuePiece | [ValuePiece, ValuePiece];
@@ -24,6 +25,13 @@ function getBathroomAssignment(thursday: Date, bathroomTenants: string[]) {
   const weekIdx = getWeekIndex(thursday);
   return bathroomTenants.length > 0
     ? bathroomTenants[((Math.floor(weekIdx / 2) % bathroomTenants.length) + bathroomTenants.length) % bathroomTenants.length]
+    : "—";
+}
+
+function getDishesAssignment(sunday: Date, dishesTenants: string[]) {
+  const weekIdx = getDishesWeekIndex(sunday);
+  return dishesTenants.length > 0
+    ? dishesTenants[((weekIdx % dishesTenants.length) + dishesTenants.length) % dishesTenants.length]
     : "—";
 }
 
@@ -55,19 +63,34 @@ interface Props {
   birthdays?: Birthday[];
   maleTenants?: string[];
   bathroomTenants?: string[];
+  dishesTenants?: string[];
 }
 
-const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bathroomTenants = [] }: Props) => {
+type ReminderType = "trash" | "bathroom" | "dishes" | "rent";
+
+const AUTO_SETTING_KEY: Record<ReminderType, string> = {
+  trash: "autoTrashReminder",
+  bathroom: "autoBathroomReminder",
+  dishes: "autoDishesReminder",
+  rent: "autoRentReminder",
+};
+
+const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bathroomTenants = [], dishesTenants = [] }: Props) => {
   const today = new Date();
   const [selected, setSelected] = useState<Value>(today);
   const [activeStart, setActiveStart] = useState<Date>(
     new Date(today.getFullYear(), today.getMonth(), 1)
   );
-  const [reminding, setReminding] = useState<"trash" | "bathroom" | null>(null);
+  const [reminding, setReminding] = useState<ReminderType | null>(null);
   const [remindMsg, setRemindMsg] = useState<string | null>(null);
   const [autoTrash, setAutoTrash] = useState(true);
   const [autoBathroom, setAutoBathroom] = useState(true);
-  const [togglingAuto, setTogglingAuto] = useState<"trash" | "bathroom" | null>(null);
+  const [autoDishes, setAutoDishes] = useState(true);
+  const [autoRent, setAutoRent] = useState(true);
+  const [togglingAuto, setTogglingAuto] = useState<ReminderType | null>(null);
+  const [rentDueDay, setRentDueDay] = useState("1");
+  const [rentLeadDays, setRentLeadDays] = useState("3");
+  const [savingRentSetting, setSavingRentSetting] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -76,13 +99,18 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
       .then((data) => {
         if (data.autoTrashReminder !== undefined) setAutoTrash(data.autoTrashReminder === "true");
         if (data.autoBathroomReminder !== undefined) setAutoBathroom(data.autoBathroomReminder === "true");
+        if (data.autoDishesReminder !== undefined) setAutoDishes(data.autoDishesReminder === "true");
+        if (data.autoRentReminder !== undefined) setAutoRent(data.autoRentReminder === "true");
+        if (data.rentDueDay !== undefined) setRentDueDay(data.rentDueDay);
+        if (data.rentReminderLeadDays !== undefined) setRentLeadDays(data.rentReminderLeadDays);
       })
       .catch(() => null);
   }, [isAdmin]);
 
-  const handleToggleAuto = async (type: "trash" | "bathroom") => {
-    const key = type === "trash" ? "autoTrashReminder" : "autoBathroomReminder";
-    const newValue = type === "trash" ? !autoTrash : !autoBathroom;
+  const handleToggleAuto = async (type: ReminderType) => {
+    const key = AUTO_SETTING_KEY[type];
+    const current = type === "trash" ? autoTrash : type === "bathroom" ? autoBathroom : type === "dishes" ? autoDishes : autoRent;
+    const newValue = !current;
     setTogglingAuto(type);
     await fetch("/api/settings", {
       method: "PATCH",
@@ -90,8 +118,21 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
       body: JSON.stringify({ key, value: String(newValue) }),
     }).catch(() => null);
     if (type === "trash") setAutoTrash(newValue);
-    else setAutoBathroom(newValue);
+    else if (type === "bathroom") setAutoBathroom(newValue);
+    else if (type === "dishes") setAutoDishes(newValue);
+    else setAutoRent(newValue);
     setTogglingAuto(null);
+  };
+
+  const handleSaveRentSetting = async (key: "rentDueDay" | "rentReminderLeadDays", value: string) => {
+    if (!/^\d+$/.test(value)) return;
+    setSavingRentSetting(true);
+    await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value }),
+    }).catch(() => null);
+    setSavingRentSetting(false);
   };
 
   const year = activeStart.getFullYear();
@@ -109,6 +150,9 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
   // Saturday click → show bathroom detail for that week
   const selectedSaturday = selectedDate.getDay() === 6 ? selectedDate : null;
 
+  // Sunday click → show dishes detail for that week
+  const selectedSunday = selectedDate.getDay() === 0 ? selectedDate : null;
+
   const focusedThursday = getThursdayOfWeek(selectedDate);
 
   const clickedTrash = selectedThursday ? getTrashAssignment(selectedThursday, maleTenants) : null;
@@ -117,6 +161,9 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
     : null;
   const clickedBathroomSaturday = selectedSaturday
     ? getBathroomAssignment(getThursdayOfSameWeek(selectedSaturday), bathroomTenants)
+    : null;
+  const clickedDishes = selectedSunday
+    ? getDishesAssignment(selectedSunday, dishesTenants)
     : null;
 
   // Birthdays on the selected day
@@ -128,8 +175,10 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
   const currentThursday = getThursdayOfWeek(today);
   const currentTrashTenant = getTrashAssignment(currentThursday, maleTenants).tenant;
   const currentBathroomTenant = getBathroomAssignment(currentThursday, bathroomTenants);
+  const currentSunday = getSundayOfWeek(today);
+  const currentDishesTenant = getDishesAssignment(currentSunday, dishesTenants);
 
-  const handleRemind = async (type: "trash" | "bathroom") => {
+  const handleRemind = async (type: ReminderType) => {
     setReminding(type);
     setRemindMsg(null);
     try {
@@ -140,7 +189,10 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
       });
       const data = await res.json();
       if (res.ok) {
-        setRemindMsg(`✓ Notified ${data.notified}!`);
+        const notifiedText = Array.isArray(data.notified)
+          ? data.notified.length > 0 ? data.notified.join(", ") : "nobody (no one due yet)"
+          : data.notified;
+        setRemindMsg(`✓ Notified ${notifiedText}!`);
       } else {
         setRemindMsg(`Error: ${data.error}`);
       }
@@ -214,6 +266,92 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
             </div>
           </div>
 
+          {/* Dishes card */}
+          <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-900/40">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-semibold text-teal-700 dark:text-teal-400">🍽️ Dishes</span>
+              <span className="text-[10px] text-teal-500/80 dark:text-teal-500/60 truncate">This week: {currentDishesTenant}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => handleToggleAuto("dishes")}
+                disabled={togglingAuto !== null}
+                title={autoDishes ? "Auto reminder on — click to disable" : "Auto reminder off — click to enable"}
+                className="flex items-center gap-1.5 text-[10px] text-teal-600 dark:text-teal-400 disabled:opacity-50"
+              >
+                <span className={`w-7 h-4 rounded-full transition-colors relative ${autoDishes ? "bg-teal-500" : "bg-gray-300 dark:bg-gray-600"}`}>
+                  <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${autoDishes ? "left-3.5" : "left-0.5"}`} />
+                </span>
+                <span className="hidden sm:inline">Auto</span>
+              </button>
+              <button
+                onClick={() => handleRemind("dishes")}
+                disabled={reminding !== null}
+                className="text-[11px] font-medium px-2.5 py-1 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {reminding === "dishes" ? "Sending…" : "Send now"}
+              </button>
+            </div>
+          </div>
+
+          {/* Rent card */}
+          <div className="flex flex-col gap-2 px-3 py-2.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-900/40">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-semibold text-purple-700 dark:text-purple-400">🏠 Rent</span>
+                <span className="text-[10px] text-purple-500/80 dark:text-purple-500/60 truncate">Sent to every resident with rent set</span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => handleToggleAuto("rent")}
+                  disabled={togglingAuto !== null}
+                  title={autoRent ? "Auto reminder on — click to disable" : "Auto reminder off — click to enable"}
+                  className="flex items-center gap-1.5 text-[10px] text-purple-600 dark:text-purple-400 disabled:opacity-50"
+                >
+                  <span className={`w-7 h-4 rounded-full transition-colors relative ${autoRent ? "bg-purple-500" : "bg-gray-300 dark:bg-gray-600"}`}>
+                    <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${autoRent ? "left-3.5" : "left-0.5"}`} />
+                  </span>
+                  <span className="hidden sm:inline">Auto</span>
+                </button>
+                <button
+                  onClick={() => handleRemind("rent")}
+                  disabled={reminding !== null}
+                  className="text-[11px] font-medium px-2.5 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {reminding === "rent" ? "Sending…" : "Send now"}
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-purple-600 dark:text-purple-400">
+              <label className="flex items-center gap-1">
+                Due day
+                <input
+                  type="number"
+                  min={1}
+                  max={28}
+                  value={rentDueDay}
+                  disabled={savingRentSetting}
+                  onChange={(e) => setRentDueDay(e.target.value)}
+                  onBlur={(e) => handleSaveRentSetting("rentDueDay", e.target.value)}
+                  className="w-12 px-1 py-0.5 text-center rounded border border-purple-200 dark:border-purple-900/60 bg-white dark:bg-darkSurface text-gray-700 dark:text-gray-300"
+                />
+              </label>
+              <label className="flex items-center gap-1">
+                Remind days before
+                <input
+                  type="number"
+                  min={0}
+                  max={27}
+                  value={rentLeadDays}
+                  disabled={savingRentSetting}
+                  onChange={(e) => setRentLeadDays(e.target.value)}
+                  onBlur={(e) => handleSaveRentSetting("rentReminderLeadDays", e.target.value)}
+                  className="w-12 px-1 py-0.5 text-center rounded border border-purple-200 dark:border-purple-900/60 bg-white dark:bg-darkSurface text-gray-700 dark:text-gray-300"
+                />
+              </label>
+            </div>
+          </div>
+
           {remindMsg && (
             <p className="text-xs text-center text-green-600 dark:text-green-400 font-medium">{remindMsg}</p>
           )}
@@ -255,6 +393,19 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
               <div className="flex flex-col items-center leading-none gap-0.5">
                 <span className="text-[10px] leading-none text-blue-400 dark:text-blue-300 truncate max-w-[46px] font-semibold">
                   ✨ {bathroom}
+                </span>
+                {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
+              </div>
+            );
+          }
+
+          // Sunday → dishes assignment
+          if (date.getDay() === 0) {
+            const dishes = getDishesAssignment(date, dishesTenants);
+            return (
+              <div className="flex flex-col items-center leading-none gap-0.5">
+                <span className="text-[10px] leading-none text-teal-500 dark:text-teal-300 truncate max-w-[46px] font-semibold">
+                  🍽️ {dishes}
                 </span>
                 {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
               </div>
@@ -357,9 +508,22 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
         </div>
       )}
 
-      {!clickedTrash && !clickedBathroomSaturday && clickedBirthdays.length === 0 && (
+      {/* Detail panel — Sunday click shows dishes for that week */}
+      {clickedDishes && selectedSunday && (
+        <div className="mt-4 p-4 rounded-md border-l-4 border-teal-400 bg-teal-50 dark:bg-teal-950/30">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-200 text-sm mb-1">
+            Sun, {selectedSunday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </h2>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500 dark:text-gray-400 text-xs">🍽️ Dish duty:</span>
+            <span className="font-medium text-teal-600 dark:text-teal-400">{clickedDishes}</span>
+          </div>
+        </div>
+      )}
+
+      {!clickedTrash && !clickedBathroomSaturday && !clickedDishes && clickedBirthdays.length === 0 && (
         <p className="mt-3 text-xs text-gray-400 text-center">
-          Click a Thursday (trash), Saturday (bathroom), or birthday 🎂 to see details
+          Click a Thursday (trash), Saturday (bathroom), Sunday (dishes), or birthday 🎂 to see details
         </p>
       )}
     </div>

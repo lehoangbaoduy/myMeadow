@@ -12,9 +12,14 @@ export default async function UtilitiesPage() {
 
   const isAdmin = currentUser.role === "ADMIN";
 
-  const [bills, rawDocuments] = await Promise.all([
+  const [bills, rawDocuments, activeTenants] = await Promise.all([
     prisma.utilityBill.findMany({ orderBy: [{ year: "asc" }, { month: "asc" }] }),
     prisma.utilityDocument.findMany({ orderBy: [{ year: "desc" }, { month: "desc" }] }),
+    prisma.tenant.findMany({
+      where: { isActive: true },
+      orderBy: { id: "asc" },
+      select: { id: true, name: true, utilityShare: true },
+    }),
   ]);
 
   const documents = rawDocuments.map((d: UtilityDocument) => ({
@@ -31,6 +36,8 @@ export default async function UtilitiesPage() {
       bills={bills}
       documents={documents}
       tenantName={tenantName}
+      tenantId={currentUser.tenantId}
+      tenants={activeTenants}
       currentMonth={now.getMonth() + 1}
       currentYear={now.getFullYear()}
     />
