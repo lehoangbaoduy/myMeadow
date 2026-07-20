@@ -32,6 +32,7 @@ interface TenantShareRow {
   id: number;
   name: string;
   utilityShare: number;
+  isPlaceholder: boolean;
 }
 interface Props {
   isAdmin: boolean;
@@ -535,6 +536,11 @@ export default function UtilitiesClient({ isAdmin, bills, documents, tenantName,
                   <tr key={t.id} className={`border-t border-meadowBorder/50 dark:border-darkBorder/50 ${isMe ? "bg-meadowMuted/50 dark:bg-darkBorder/30 rounded-lg" : ""}`}>
                     <td className={`py-2.5 ${isMe ? "font-semibold text-meadowOrange" : "text-gray-700 dark:text-gray-300"}`}>
                       {t.name} {isMe ? "(you)" : ""}
+                      {t.isPlaceholder && (
+                        <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full font-semibold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                          Placeholder
+                        </span>
+                      )}
                     </td>
                     <td className="py-2.5 text-center text-gray-500 dark:text-gray-400 font-medium">
                       {isAdmin ? (
@@ -560,7 +566,7 @@ export default function UtilitiesClient({ isAdmin, bills, documents, tenantName,
               })}
               {allTenants.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-4 text-center text-gray-400 text-xs">No active residents</td>
+                  <td colSpan={3} className="py-4 text-center text-gray-400 text-xs">No residents</td>
                 </tr>
               )}
             </tbody>
