@@ -16,6 +16,7 @@ interface TenantRow {
   bathroomDuty: boolean;
   rentAmount: number | null;
   createdAt: Date;
+  isPlaceholder: boolean;
 }
 
 interface MaintenanceReq {
@@ -45,6 +46,24 @@ interface EditForm {
   rentAmount: string;
 }
 
+interface AddPlaceholderForm {
+  name: string;
+  gender: string;
+  roomNumber: string;
+  rentAmount: string;
+  notes: string;
+  bathroomDuty: boolean;
+}
+
+const emptyAddForm: AddPlaceholderForm = {
+  name: "",
+  gender: "MALE",
+  roomNumber: "",
+  rentAmount: "",
+  notes: "",
+  bathroomDuty: false,
+};
+
 const inputClass =
   "w-full px-3 py-2 rounded-md border border-meadowBorder dark:border-darkBorder bg-white dark:bg-darkSurface text-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-meadowOrange";
 const labelClass = "block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1";
@@ -63,6 +82,21 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
   const [tenantRequests, setTenantRequests] = useState<MaintenanceReq[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [resolvingId, setResolvingId] = useState<number | null>(null);
+
+  // Add placeholder state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState<AddPlaceholderForm>(emptyAddForm);
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  // Delete placeholder state
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // Assign-to-placeholder state
+  const [assigningTenant, setAssigningTenant] = useState<TenantRow | null>(null);
+  const [assignPlaceholderId, setAssignPlaceholderId] = useState<string>("");
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   const openEdit = (t: TenantRow) => {
     setEditingTenant(t);
@@ -130,6 +164,76 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
     }
   };
 
+  const handleAddPlaceholder = async () => {
+    setAdding(true);
+    setAddError(null);
+    const res = await fetch("/api/tenants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: addForm.name,
+        gender: addForm.gender,
+        roomNumber: addForm.roomNumber || null,
+        notes: addForm.notes || null,
+        rentAmount: addForm.rentAmount === "" ? null : Number(addForm.rentAmount),
+        bathroomDuty: addForm.bathroomDuty,
+      }),
+    });
+    setAdding(false);
+    if (res.ok) {
+      const created = await res.json();
+      setTenants((prev) => [...prev, { ...created, isPlaceholder: true }].sort((a, b) => a.name.localeCompare(b.name)));
+      setShowAddModal(false);
+      setAddForm(emptyAddForm);
+    } else {
+      const d = await res.json();
+      setAddError(d.error ?? "Failed to add placeholder");
+    }
+  };
+
+  const handleDeletePlaceholder = async (t: TenantRow) => {
+    if (!window.confirm(`Delete placeholder "${t.name}"? This cannot be undone.`)) return;
+    setDeletingId(t.id);
+    const res = await fetch(`/api/tenants/${t.id}`, { method: "DELETE" });
+    setDeletingId(null);
+    if (res.ok) {
+      setTenants((prev) => prev.filter((row) => row.id !== t.id));
+    } else {
+      const d = await res.json();
+      window.alert(d.error ?? "Failed to delete");
+    }
+  };
+
+  const openAssign = (t: TenantRow) => {
+    setAssigningTenant(t);
+    setAssignPlaceholderId("");
+    setAssignError(null);
+  };
+
+  const handleAssign = async () => {
+    if (!assigningTenant || !assignPlaceholderId) return;
+    setAssigning(true);
+    setAssignError(null);
+    const res = await fetch(`/api/tenants/${assigningTenant.id}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ placeholderTenantId: Number(assignPlaceholderId) }),
+    });
+    setAssigning(false);
+    if (res.ok) {
+      const merged = await res.json();
+      setTenants((prev) =>
+        prev
+          .filter((row) => row.id !== Number(assignPlaceholderId))
+          .map((row) => (row.id === merged.id ? { ...row, ...merged } : row))
+      );
+      setAssigningTenant(null);
+    } else {
+      const d = await res.json();
+      setAssignError(d.error ?? "Failed to assign");
+    }
+  };
+
   const openViewRequests = async (t: TenantRow) => {
     setViewRequestsTenant(t);
     setLoadingRequests(true);
@@ -163,6 +267,12 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Residents</h1>
+        <button
+          onClick={() => { setAddForm(emptyAddForm); setAddError(null); setShowAddModal(true); }}
+          className="text-sm px-4 py-2 bg-meadowOrange hover:bg-orange-600 text-white rounded-md font-medium transition-colors"
+        >
+          + Add Placeholder
+        </button>
       </div>
 
       <div className="bg-white dark:bg-darkCard rounded-xl border border-meadowBorder dark:border-darkBorder overflow-x-auto">
@@ -189,6 +299,11 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                 <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
                   <div className="flex items-center gap-1.5">
                     {tenant.name}
+                    {tenant.isPlaceholder && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 flex-shrink-0">
+                        Placeholder
+                      </span>
+                    )}
                     {(pendingMap[tenant.id] ?? 0) > 0 && (
                       <span className="inline-flex items-center justify-center w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex-shrink-0" title={`${pendingMap[tenant.id]} pending request(s)`}>
                         !
@@ -247,6 +362,23 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                     >
                       {togglingId === tenant.id ? "…" : tenant.isActive ? "Deactivate" : "Activate"}
                     </button>
+                    {tenant.isPlaceholder && (
+                      <button
+                        onClick={() => handleDeletePlaceholder(tenant)}
+                        disabled={deletingId === tenant.id}
+                        className="text-xs px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors font-medium disabled:opacity-50"
+                      >
+                        {deletingId === tenant.id ? "…" : "Delete"}
+                      </button>
+                    )}
+                    {!tenant.isPlaceholder && !tenant.roomNumber && (
+                      <button
+                        onClick={() => openAssign(tenant)}
+                        className="text-xs px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-md hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors font-medium"
+                      >
+                        Assign Room
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -330,6 +462,113 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Add Placeholder Modal ─── */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-darkCard rounded-xl border border-meadowBorder dark:border-darkBorder p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Add Placeholder Resident</h2>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold">&times;</button>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">
+              Reserves a room slot with no login. Once a new resident registers, use “Assign Room” on their row to fill this slot.
+            </p>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className={labelClass}>Name</label>
+                <input type="text" value={addForm.name} onChange={(e) => setAddForm((p) => ({ ...p, name: e.target.value }))} required className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Gender</label>
+                <select value={addForm.gender} onChange={(e) => setAddForm((p) => ({ ...p, gender: e.target.value }))} className={inputClass}>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Room Number</label>
+                <input type="text" value={addForm.roomNumber} onChange={(e) => setAddForm((p) => ({ ...p, roomNumber: e.target.value }))} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Monthly Rent ($)</label>
+                <input type="number" min={0} step={0.01} value={addForm.rentAmount} onChange={(e) => setAddForm((p) => ({ ...p, rentAmount: e.target.value }))} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Notes</label>
+                <textarea rows={3} value={addForm.notes} onChange={(e) => setAddForm((p) => ({ ...p, notes: e.target.value }))} className={`${inputClass} resize-none`} />
+              </div>
+              <div className="flex items-center gap-3 py-1">
+                <input
+                  type="checkbox"
+                  id="addBathroomDuty"
+                  checked={addForm.bathroomDuty}
+                  onChange={(e) => setAddForm((p) => ({ ...p, bathroomDuty: e.target.checked }))}
+                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
+                />
+                <label htmlFor="addBathroomDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  Bathroom duty
+                </label>
+              </div>
+              {addError && <p className="text-red-500 text-sm">{addError}</p>}
+              <div className="flex gap-3">
+                <button onClick={handleAddPlaceholder} disabled={adding || !addForm.name}
+                  className="flex-1 py-2 bg-meadowOrange hover:bg-orange-600 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50">
+                  {adding ? "Adding…" : "Add Placeholder"}
+                </button>
+                <button onClick={() => setShowAddModal(false)}
+                  className="flex-1 py-2 border border-meadowBorder dark:border-darkBorder text-gray-700 dark:text-gray-300 rounded-md text-sm hover:bg-meadowMuted dark:hover:bg-darkSurface transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Assign Room Modal ─── */}
+      {assigningTenant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-darkCard rounded-xl border border-meadowBorder dark:border-darkBorder p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Assign Room — {assigningTenant.name}</h2>
+              <button onClick={() => setAssigningTenant(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold">&times;</button>
+            </div>
+            {(() => {
+              const placeholders = tenants.filter((t) => t.isPlaceholder);
+              if (placeholders.length === 0) {
+                return <p className="text-sm text-gray-500 dark:text-gray-400">No placeholder rooms available. Add one first.</p>;
+              }
+              return (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <label className={labelClass}>Placeholder room</label>
+                    <select value={assignPlaceholderId} onChange={(e) => setAssignPlaceholderId(e.target.value)} className={inputClass}>
+                      <option value="">Select a placeholder…</option>
+                      {placeholders.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}{p.roomNumber ? ` — Room ${p.roomNumber}` : ""}{p.rentAmount != null ? ` — $${p.rentAmount}/mo` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {assignError && <p className="text-red-500 text-sm">{assignError}</p>}
+                  <div className="flex gap-3">
+                    <button onClick={handleAssign} disabled={assigning || !assignPlaceholderId}
+                      className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50">
+                      {assigning ? "Assigning…" : "Assign"}
+                    </button>
+                    <button onClick={() => setAssigningTenant(null)}
+                      className="flex-1 py-2 border border-meadowBorder dark:border-darkBorder text-gray-700 dark:text-gray-300 rounded-md text-sm hover:bg-meadowMuted dark:hover:bg-darkSurface transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

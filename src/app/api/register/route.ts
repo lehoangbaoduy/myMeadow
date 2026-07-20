@@ -58,5 +58,18 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  if (role !== "ADMIN") {
+    const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
+    if (admins.length > 0) {
+      await prisma.notification.createMany({
+        data: admins.map((admin) => ({
+          userId: admin.id,
+          fromName: "System",
+          content: `🆕 ${name} (${email}) just registered. Assign them to a room in Residents if they belong to a reserved placeholder.`,
+        })),
+      });
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

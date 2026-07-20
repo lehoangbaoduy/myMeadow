@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { isPlaceholderClerkId } from "@/lib/tenant-placeholder";
 
 const financialFieldsSchema = z.object({
   utilityShare: z.number().finite().nonnegative().optional(),
@@ -92,6 +93,28 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await prisma.tenant.delete({ where: { id: Number(params.id) } });
+  const tenantId = Number(params.id);
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    include: { user: { select: { id: true, clerkId: true } } },
+  });
+  if (!tenant) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (!isPlaceholderClerkId(tenant.user.clerkId)) {
+    return NextResponse.json(
+      { error: "Only placeholder residents can be deleted. Deactivate real residents instead." },
+      { status: 403 }
+    );
+  }
+
+  await prisma.$transaction([
+    prisma.trashAssignment.deleteMany({ where: { tenantId } }),
+    prisma.dishesAssignment.deleteMany({ where: { tenantId } }),
+    prisma.rentReminderLog.deleteMany({ where: { tenantId } }),
+    prisma.maintenanceRequest.deleteMany({ where: { tenantId } }),
+    prisma.tenant.delete({ where: { id: tenantId } }),
+    prisma.user.delete({ where: { id: tenant.user.id } }),
+  ]);
+
   return NextResponse.json({ success: true });
 }

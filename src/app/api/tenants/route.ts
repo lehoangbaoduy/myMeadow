@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { makePlaceholderClerkId } from "@/lib/tenant-placeholder";
 
 async function getRole(clerkId: string) {
   const user = await prisma.user.findUnique({ where: { clerkId } });
@@ -19,6 +21,16 @@ export async function GET() {
   return NextResponse.json(tenants);
 }
 
+const createPlaceholderSchema = z.object({
+  name: z.string().min(1),
+  gender: z.enum(["MALE", "FEMALE"]),
+  dob: z.string().optional().nullable(),
+  roomNumber: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  rentAmount: z.number().finite().nonnegative().optional().nullable(),
+  bathroomDuty: z.boolean().optional(),
+});
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,19 +39,18 @@ export async function POST(req: NextRequest) {
   if (role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, dob, gender, roomNumber, notes, clerkId } = body;
-
-  if (!name || !gender) {
-    return NextResponse.json({ error: "name and gender are required" }, { status: 400 });
+  const parsed = createPlaceholderSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid resident data", details: parsed.error.flatten() }, { status: 400 });
   }
+  const { name, gender, dob, roomNumber, notes, rentAmount, bathroomDuty } = parsed.data;
 
-  // Find or create user row
-  let linkedUser = await prisma.user.findUnique({ where: { clerkId: clerkId ?? "" } });
-  if (!linkedUser) {
-    linkedUser = await prisma.user.create({
-      data: { clerkId: clerkId ?? `manual_${Date.now()}`, role: "TENANT" },
-    });
-  }
+  // This endpoint always creates a placeholder resident (a reserved room slot with no
+  // real Clerk login). It's kept inactive by default so it never enters the trash/bathroom/
+  // dishes rotation shown to real residents, and never receives rent reminders.
+  const placeholderUser = await prisma.user.create({
+    data: { clerkId: makePlaceholderClerkId(), role: "TENANT" },
+  });
 
   const tenant = await prisma.tenant.create({
     data: {
@@ -48,7 +59,10 @@ export async function POST(req: NextRequest) {
       gender,
       roomNumber: roomNumber ?? null,
       notes: notes ?? null,
-      userId: linkedUser.id,
+      rentAmount: rentAmount ?? null,
+      bathroomDuty: bathroomDuty ?? false,
+      isActive: false,
+      userId: placeholderUser.id,
     },
   });
 

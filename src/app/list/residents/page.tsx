@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { isPlaceholderClerkId } from "@/lib/tenant-placeholder";
 import ResidentsClient from "./ResidentsClient";
 
 export default async function ResidentsPage() {
@@ -8,9 +9,14 @@ export default async function ResidentsPage() {
   if (!currentUser) redirect("/sign-in");
   if (currentUser.role !== "ADMIN") redirect("/admin");
 
-  const tenants = await prisma.tenant.findMany({
+  const tenantRows = await prisma.tenant.findMany({
     orderBy: { name: "asc" },
+    include: { user: { select: { clerkId: true } } },
   });
+  const tenants = tenantRows.map(({ user, ...tenant }) => ({
+    ...tenant,
+    isPlaceholder: isPlaceholderClerkId(user.clerkId),
+  }));
 
   // Fetch pending maintenance request counts per tenant
   const pendingCounts = await prisma.maintenanceRequest.groupBy({
