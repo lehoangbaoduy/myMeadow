@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getWeekIndex, getThursdayOfWeek } from "@/lib/trash-schedule";
 import { getWeekIndex as getDishesWeekIndex, getSundayOfWeek } from "@/lib/dishes-schedule";
-import { getDishesDutyTenants } from "@/lib/dishes-duty";
+import { getTrashDutyTenants, getBathroomDutyTenants, getDishesDutyTenants } from "@/lib/duty-tenants";
 import { Resend } from "resend";
 
 let resend: Resend | null = null;
@@ -83,22 +83,16 @@ export async function sendReminder(type: "trash" | "bathroom" | "dishes"): Promi
   if (type === "trash") {
     const thursday = getThursdayOfWeek(today);
     const weekIdx = getWeekIndex(thursday);
-    const maleTenants = await prisma.tenant.findMany({
-      where: { gender: "MALE", isActive: true },
-      orderBy: { id: "asc" },
-    });
-    if (maleTenants.length === 0) throw new Error("No active male tenants found");
-    tenant = pickByWeekIndex(maleTenants, weekIdx);
+    const trashTenants = await getTrashDutyTenants();
+    if (trashTenants.length === 0) throw new Error("No tenants with trash duty found");
+    tenant = pickByWeekIndex(trashTenants, weekIdx);
     const dateStr = thursday.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
     content = `Hey ${tenant.name}! 👋 Just a friendly reminder — it's your turn to take out the trash this Thursday (${dateStr}). Please bring the bins to the curb by 7 PM. Thank you for keeping our home clean! 🗑️`;
     subject = `🗑️ Trash Reminder — ${dateStr}`;
   } else if (type === "bathroom") {
     const thursday = getThursdayOfWeek(today);
     const weekIdx = getWeekIndex(thursday);
-    const bathroomTenants = await prisma.tenant.findMany({
-      where: { bathroomDuty: true, isActive: true },
-      orderBy: { id: "asc" },
-    });
+    const bathroomTenants = await getBathroomDutyTenants();
     if (bathroomTenants.length === 0) throw new Error("No tenants with bathroom duty found");
     tenant = pickByWeekIndex(bathroomTenants, Math.floor(weekIdx / 2));
     content = `Hey ${tenant.name}! ✨ This is your 2-week bathroom cleaning rotation. Please give the bathroom a thorough scrub (toilet, sink, mirror, floor) before Sunday. Your effort keeps our home fresh — thank you! ✨`;

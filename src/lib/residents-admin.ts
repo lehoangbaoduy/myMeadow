@@ -11,6 +11,7 @@ export interface TenantRow {
   isActive: boolean;
   bathroomDuty: boolean;
   dishesDuty: boolean;
+  trashDuty: boolean;
   rentAmount: number | null;
   createdAt: Date;
   isPlaceholder: boolean;
@@ -36,6 +37,7 @@ export interface EditForm {
   notes: string;
   bathroomDuty: boolean;
   dishesDuty: boolean;
+  trashDuty: boolean;
   rentAmount: string;
 }
 
@@ -47,6 +49,7 @@ export interface AddPlaceholderForm {
   notes: string;
   bathroomDuty: boolean;
   dishesDuty: boolean;
+  trashDuty: boolean;
 }
 
 export const emptyAddForm: AddPlaceholderForm = {
@@ -57,6 +60,7 @@ export const emptyAddForm: AddPlaceholderForm = {
   notes: "",
   bathroomDuty: false,
   dishesDuty: true,
+  trashDuty: false,
 };
 
 export function formatDate(d: Date | string | null): string {

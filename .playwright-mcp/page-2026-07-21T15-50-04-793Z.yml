@@ -1,0 +1,20 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - img "MyMeadow" [ref=e4]
+      - heading "How would you like to view MyMeadow?" [level=1] [ref=e5]
+      - paragraph [ref=e6]: You can switch anytime from your account menu — this only sets how this device shows the app.
+    - generic [ref=e7]:
+      - button "🖥️ Continue on PC The familiar full dashboard — sidebar navigation, charts, and tables sized for a larger screen. Choose PC →" [ref=e8] [cursor=pointer]:
+        - generic [ref=e9]: 🖥️
+        - generic [ref=e10]:
+          - heading "Continue on PC" [level=2] [ref=e11]
+          - paragraph [ref=e12]: The familiar full dashboard — sidebar navigation, charts, and tables sized for a larger screen.
+        - generic [ref=e13]: Choose PC →
+      - button "📱 Continue on Mobile A touch-first layout with bottom-tab navigation and stacked cards, built for one-handed use. Choose Mobile →" [ref=e14] [cursor=pointer]:
+        - generic [ref=e15]: 📱
+        - generic [ref=e16]:
+          - heading "Continue on Mobile" [level=2] [ref=e17]
+          - paragraph [ref=e18]: A touch-first layout with bottom-tab navigation and stacked cards, built for one-handed use.
+        - generic [ref=e19]: Choose Mobile →
+  - alert [ref=e20]

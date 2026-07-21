@@ -18,7 +18,7 @@ export function useResidentsAdmin({ tenants: initialTenants, pendingMap: initial
   const [tenants, setTenants] = useState(initialTenants);
   const [pendingMap] = useState(initialPendingMap);
   const [editingTenant, setEditingTenant] = useState<TenantRow | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ name: "", nickname: "", dob: "", gender: "MALE", roomNumber: "", phone: "", email: "", notes: "", bathroomDuty: true, dishesDuty: true, rentAmount: "" });
+  const [editForm, setEditForm] = useState<EditForm>({ name: "", nickname: "", dob: "", gender: "MALE", roomNumber: "", phone: "", email: "", notes: "", bathroomDuty: true, dishesDuty: true, trashDuty: false, rentAmount: "" });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -57,6 +57,7 @@ export function useResidentsAdmin({ tenants: initialTenants, pendingMap: initial
       notes: t.notes ?? "",
       bathroomDuty: t.bathroomDuty,
       dishesDuty: t.dishesDuty,
+      trashDuty: t.trashDuty,
       rentAmount: t.rentAmount != null ? String(t.rentAmount) : "",
     });
     setSaveError(null);
@@ -84,6 +85,7 @@ export function useResidentsAdmin({ tenants: initialTenants, pendingMap: initial
         notes: editForm.notes || null,
         bathroomDuty: editForm.bathroomDuty,
         dishesDuty: editForm.dishesDuty,
+        trashDuty: editForm.trashDuty,
         rentAmount: editForm.rentAmount === "" ? null : Number(editForm.rentAmount),
       }),
     });
@@ -126,6 +128,7 @@ export function useResidentsAdmin({ tenants: initialTenants, pendingMap: initial
         rentAmount: addForm.rentAmount === "" ? null : Number(addForm.rentAmount),
         bathroomDuty: addForm.bathroomDuty,
         dishesDuty: addForm.dishesDuty,
+        trashDuty: addForm.trashDuty,
       }),
     });
     setAdding(false);

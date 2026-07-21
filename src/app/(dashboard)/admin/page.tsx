@@ -8,30 +8,23 @@ import Annoucements from "@/components/Announcements";
 import MobileDashboardContent from "@/components/mobile/MobileDashboardContent";
 import MobileEventCalendar from "@/components/mobile/MobileEventCalendar";
 import MobileResidentCount from "@/components/mobile/MobileResidentCount";
-import { getDishesDutyTenants } from "@/lib/dishes-duty";
+import { getTrashDutyTenants, getBathroomDutyTenants, getDishesDutyTenants } from "@/lib/duty-tenants";
 
 const AdminPage = async () => {
   const currentUser = await getCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
   const isMobile = (await getViewMode()) === "mobile";
 
-  const [bills, tenantDobs, maleTenantRows, bathroomTenantRows, dishesDutyTenantRows] = await Promise.all([
+  const [bills, tenantDobs, trashTenantRows, bathroomTenantRows, dishesDutyTenantRows, runOutItems] = await Promise.all([
     prisma.utilityBill.findMany({ orderBy: [{ year: "asc" }, { month: "asc" }] }),
     prisma.tenant.findMany({
       where: { isActive: true, dob: { not: null } },
       select: { name: true, dob: true },
     }),
-    prisma.tenant.findMany({
-      where: { gender: "MALE", isActive: true },
-      orderBy: { id: "asc" },
-      select: { name: true },
-    }),
-    prisma.tenant.findMany({
-      where: { bathroomDuty: true, isActive: true },
-      orderBy: { id: "asc" },
-      select: { name: true },
-    }),
+    getTrashDutyTenants(),
+    getBathroomDutyTenants(),
     getDishesDutyTenants(),
+    prisma.inventoryRunOut.findMany({ where: { resolved: false }, orderBy: { reportedAt: "desc" } }),
   ]);
 
   const latestBill = bills.length > 0 ? bills[bills.length - 1] : null;
@@ -44,16 +37,25 @@ const AdminPage = async () => {
       day: new Date(t.dob).getUTCDate(),
     }));
 
+  const trashTenants = trashTenantRows.map((t) => t.name);
+  const bathroomTenants = bathroomTenantRows.map((t) => t.name);
+  const dishesTenants = dishesDutyTenantRows.map((t) => t.name);
+
   if (isMobile) {
     return (
       <div className="flex flex-col gap-4">
-        <MobileDashboardContent isAdmin={isAdmin} bills={bills} />
+        <MobileDashboardContent
+          bills={bills}
+          trashTenants={trashTenants}
+          bathroomTenants={bathroomTenants}
+          runOutItems={runOutItems.map((r) => ({ id: r.id, itemName: r.itemName }))}
+        />
         <MobileEventCalendar
           isAdmin={isAdmin}
           birthdays={birthdays}
-          maleTenants={maleTenantRows.map((t) => t.name)}
-          bathroomTenants={bathroomTenantRows.map((t) => t.name)}
-          dishesTenants={dishesDutyTenantRows.map((t) => t.name)}
+          trashTenants={trashTenants}
+          bathroomTenants={bathroomTenants}
+          dishesTenants={dishesTenants}
         />
         <MobileResidentCount />
         <Annoucements isAdmin={isAdmin} />
@@ -70,9 +72,9 @@ const AdminPage = async () => {
         <EventCalendar
           isAdmin={isAdmin}
           birthdays={birthdays}
-          maleTenants={maleTenantRows.map((t) => t.name)}
-          bathroomTenants={bathroomTenantRows.map((t) => t.name)}
-          dishesTenants={dishesDutyTenantRows.map((t) => t.name)}
+          trashTenants={trashTenants}
+          bathroomTenants={bathroomTenants}
+          dishesTenants={dishesTenants}
         />
         <ResidentCount />
         <Annoucements isAdmin={isAdmin} />

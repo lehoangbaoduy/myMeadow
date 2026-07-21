@@ -25,12 +25,12 @@ interface Birthday {
 interface Props {
   isAdmin?: boolean;
   birthdays?: Birthday[];
-  maleTenants?: string[];
+  trashTenants?: string[];
   bathroomTenants?: string[];
   dishesTenants?: string[];
 }
 
-const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bathroomTenants = [], dishesTenants = [] }: Props) => {
+const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bathroomTenants = [], dishesTenants = [] }: Props) => {
   const today = new Date();
   const [selected, setSelected] = useState<Value>(today);
   const [activeStart, setActiveStart] = useState<Date>(
@@ -74,7 +74,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
 
   const focusedThursday = getThursdayOfWeek(selectedDate);
 
-  const clickedTrash = selectedThursday ? getTrashAssignment(selectedThursday, maleTenants) : null;
+  const clickedTrash = selectedThursday ? getTrashAssignment(selectedThursday, trashTenants) : null;
   const clickedBathroomThursday = selectedThursday
     ? getBathroomAssignment(selectedThursday, bathroomTenants)
     : null;
@@ -92,7 +92,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
 
   // Current week's assignments (for admin remind buttons tooltip)
   const currentThursday = getThursdayOfWeek(today);
-  const currentTrashTenant = getTrashAssignment(currentThursday, maleTenants).tenant;
+  const currentTrashTenant = getTrashAssignment(currentThursday, trashTenants).tenant;
   const currentBathroomTenant = getBathroomAssignment(currentThursday, bathroomTenants);
   const currentSunday = getSundayOfWeek(today);
   const currentDishesTenant = getDishesAssignment(currentSunday, dishesTenants);
@@ -268,7 +268,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
 
           // Thursday → trash assignment
           if (date.getDay() === 4) {
-            const { tenant } = getTrashAssignment(date, maleTenants);
+            const { tenant } = getTrashAssignment(date, trashTenants);
             return (
               <div className="flex flex-col items-center leading-none gap-0.5">
                 <span className="text-[10px] leading-none text-orange-500 dark:text-orange-400 truncate max-w-[46px] font-semibold">
@@ -322,7 +322,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
           const classes: string[] = [];
 
           if (date.getDay() === 4) {
-            const { hasRecycle } = getTrashAssignment(date, maleTenants);
+            const { hasRecycle } = getTrashAssignment(date, trashTenants);
             const isActive = isSameDay(date, focusedThursday);
             classes.push(hasRecycle ? "thursday-recycle" : "thursday-garbage");
             if (isActive) classes.push("thursday-active");

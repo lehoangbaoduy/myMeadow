@@ -1,102 +1,114 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  BillChartSection,
-  UsageChartSection,
-  PriceChartSection,
-  CUR_MONTH,
-  CUR_YEAR,
-  fmtLabel,
-  type UtilityBillRow,
-} from "@/components/DashboardContent";
+import Link from "next/link";
+import { CUR_MONTH, CUR_YEAR, fmtLabel, type UtilityBillRow } from "@/components/DashboardContent";
+import { getThursdayOfWeek } from "@/lib/trash-schedule";
+import { getTrashAssignment, getBathroomAssignment } from "@/lib/rotation-assignments";
+import MobileCard from "./MobileCard";
+
+interface RunOutItem {
+  id: number;
+  itemName: string;
+}
+
 interface Props {
-  isAdmin: boolean;
   bills: UtilityBillRow[];
+  trashTenants: string[];
+  bathroomTenants: string[];
+  runOutItems: RunOutItem[];
 }
 
-const CARD_STYLES: Record<string, { bg: string; icon: string }> = {
-  electric: { bg: "bg-amber-400 dark:bg-amber-500", icon: "⚡" },
-  gas: { bg: "bg-red-500 dark:bg-red-600", icon: "🔥" },
-  water: { bg: "bg-cyan-500 dark:bg-cyan-600", icon: "💧" },
-  wifi: { bg: "bg-violet-500 dark:bg-violet-600", icon: "📡" },
-};
+const UTIL_ROWS: { key: keyof UtilityBillRow; label: string; icon: string }[] = [
+  { key: "electric", label: "Electric", icon: "⚡" },
+  { key: "gas", label: "Gas", icon: "🔥" },
+  { key: "water", label: "Water", icon: "💧" },
+  { key: "wifi", label: "WiFi", icon: "📡" },
+];
 
-function MobileUtilityStrip({ latest }: { latest: UtilityBillRow | null }) {
-  const cards = [
-    { type: "electric", label: "Electric", value: latest?.electric ?? null },
-    { type: "gas", label: "Gas", value: latest?.gas ?? null },
-    { type: "water", label: "Water", value: latest?.water ?? null },
-    { type: "wifi", label: "WiFi", value: latest?.wifi ?? null },
-  ];
-  return (
-    <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 -mx-4 px-4">
-      {cards.map((c) => {
-        const s = CARD_STYLES[c.type];
-        return (
-          <div key={c.type} className={`flex-shrink-0 w-32 snap-start rounded-2xl p-4 ${s.bg}`}>
-            <div className="flex justify-between items-start mb-3">
-              <span className="text-xl">{s.icon}</span>
-              <span className="text-[10px] px-2 py-1 rounded-full font-medium bg-black/15 text-white/90">
-                {latest ? fmtLabel(latest.month, latest.year) : "—"}
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold text-white">{c.value != null ? `$${c.value.toFixed(0)}` : "—"}</h1>
-            <h2 className="text-xs font-semibold mt-1 text-white/70">{c.label}</h2>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+export default function MobileDashboardContent({ bills, trashTenants, bathroomTenants, runOutItems }: Props) {
+  const curMonthBill = bills.find((b) => b.month === CUR_MONTH && b.year === CUR_YEAR) ?? null;
 
-const SEGMENTS = [
-  { key: "total", label: "Total" },
-  { key: "usage", label: "Usage" },
-  { key: "costs", label: "Costs" },
-] as const;
-
-type SegmentKey = (typeof SEGMENTS)[number]["key"];
-
-export default function MobileDashboardContent({ isAdmin, bills }: Props) {
-  const [currentBills, setCurrentBills] = useState(bills);
-  const [segment, setSegment] = useState<SegmentKey>("total");
-
-  const curMonthBill = useMemo(
-    () => currentBills.find((b) => b.month === CUR_MONTH && b.year === CUR_YEAR) ?? null,
-    [currentBills]
-  );
-
-  const refresh = async () => {
-    const res = await fetch("/api/utilities");
-    if (res.ok) setCurrentBills(await res.json());
-  };
+  const thisThursday = getThursdayOfWeek(new Date());
+  const trashAssignment = getTrashAssignment(thisThursday, trashTenants);
+  const bathroomAssignee = getBathroomAssignment(thisThursday, bathroomTenants);
+  const thursdayLabel = thisThursday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
     <div className="flex flex-col gap-4">
-      <MobileUtilityStrip latest={curMonthBill} />
+      {/* Card 1 — Utilities bill for the month */}
+      <MobileCard>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Utilities</h2>
+          <span className="text-[11px] text-gray-400">{curMonthBill ? fmtLabel(curMonthBill.month, curMonthBill.year) : fmtLabel(CUR_MONTH, CUR_YEAR)}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {UTIL_ROWS.map((row) => (
+            <div key={row.key} className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-meadowLight dark:bg-darkSurface">
+              <span className="text-lg">{row.icon}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  {curMonthBill ? `$${(curMonthBill[row.key] as number).toFixed(0)}` : "—"}
+                </p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">{row.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <Link href="/utilities" className="mt-3 inline-block text-xs text-meadowOrange font-medium">
+          View Utilities →
+        </Link>
+      </MobileCard>
 
-      <div className="flex gap-1.5 p-1 rounded-xl bg-white dark:bg-darkCard border border-meadowBorder dark:border-darkBorder">
-        {SEGMENTS.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => setSegment(s.key)}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              segment === s.key
-                ? "bg-meadowOrange text-white"
-                : "text-gray-500 dark:text-gray-400"
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+      {/* Card 2 — Kitchen inventory: what's running low */}
+      <MobileCard>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🍳 Kitchen Inventory</h2>
+          {runOutItems.length > 0 && (
+            <span className="text-[10px] px-2 py-0.5 bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 rounded-full font-semibold">
+              {runOutItems.length} low
+            </span>
+          )}
+        </div>
+        {runOutItems.length === 0 ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500">Everything is stocked! 🎉</p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {runOutItems.map((item) => (
+              <div key={item.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                {item.itemName}
+              </div>
+            ))}
+          </div>
+        )}
+        <Link href="/kitchen-inventory" className="mt-3 inline-block text-xs text-meadowOrange font-medium">
+          View Inventory →
+        </Link>
+      </MobileCard>
 
-      <div className="h-[400px]">
-        {segment === "total" && <BillChartSection isAdmin={isAdmin} bills={currentBills} onUpdated={refresh} />}
-        {segment === "usage" && <UsageChartSection isAdmin={isAdmin} bills={currentBills} onUpdated={refresh} />}
-        {segment === "costs" && <PriceChartSection isAdmin={isAdmin} bills={currentBills} onUpdated={refresh} />}
-      </div>
+      {/* Card 3 — Trash schedule, this week */}
+      <MobileCard>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🗑️ Trash — This Week</h2>
+          <span className="text-[11px] text-gray-400">{thursdayLabel}</span>
+        </div>
+        <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{trashAssignment.tenant}</p>
+        <span className={`mt-1 inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full w-fit ${
+          trashAssignment.hasRecycle
+            ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+            : "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400"
+        }`}>
+          {trashAssignment.hasRecycle ? "🗑️ Garbage + ♻️ Recycle" : "🗑️ Garbage only"}
+        </span>
+      </MobileCard>
+
+      {/* Card 4 — Bathroom schedule, this week */}
+      <MobileCard>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">✨ Bathroom — This Week</h2>
+        </div>
+        <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{bathroomAssignee}</p>
+      </MobileCard>
     </div>
   );
 }

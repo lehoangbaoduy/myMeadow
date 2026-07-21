@@ -2,8 +2,16 @@ import Link from "next/link";
 import Image from "next/image";
 import Menu from "@/components/Menu";
 import Navbar from "@/components/Navbar";
+import MobileShell from "@/components/mobile/MobileShell";
+import { getViewMode } from "@/lib/view-mode";
 
-export default function ListLayout({ children }: { children: React.ReactNode }) {
+export default async function ListLayout({ children }: { children: React.ReactNode }) {
+  const viewMode = await getViewMode();
+
+  if (viewMode === "mobile") {
+    return <MobileShell>{children}</MobileShell>;
+  }
+
   return (
     <div className="h-screen flex bg-meadowLight dark:bg-darkBg">
       {/* LEFT SIDEBAR */}

@@ -1,36 +1,31 @@
 import EventCalendar from "@/components/EventCalendar";
 import MobileEventCalendar from "@/components/mobile/MobileEventCalendar";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { getViewMode } from "@/lib/view-mode";
-import { getDishesDutyTenants } from "@/lib/dishes-duty";
+import { getTrashDutyTenants, getBathroomDutyTenants, getDishesDutyTenants } from "@/lib/duty-tenants";
 
 const CalendarPage = async () => {
   const currentUser = await getCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
   const isMobile = (await getViewMode()) === "mobile";
 
-  const [maleTenantRows, bathroomTenantRows, dishesDutyTenantRows] = await Promise.all([
-    prisma.tenant.findMany({
-      where: { gender: "MALE", isActive: true },
-      orderBy: { id: "asc" },
-      select: { name: true },
-    }),
-    prisma.tenant.findMany({
-      where: { bathroomDuty: true, isActive: true },
-      orderBy: { id: "asc" },
-      select: { name: true },
-    }),
+  const [trashTenantRows, bathroomTenantRows, dishesDutyTenantRows] = await Promise.all([
+    getTrashDutyTenants(),
+    getBathroomDutyTenants(),
     getDishesDutyTenants(),
   ]);
+
+  const trashTenants = trashTenantRows.map((t) => t.name);
+  const bathroomTenants = bathroomTenantRows.map((t) => t.name);
+  const dishesTenants = dishesDutyTenantRows.map((t) => t.name);
 
   if (isMobile) {
     return (
       <MobileEventCalendar
         isAdmin={isAdmin}
-        maleTenants={maleTenantRows.map((t) => t.name)}
-        bathroomTenants={bathroomTenantRows.map((t) => t.name)}
-        dishesTenants={dishesDutyTenantRows.map((t) => t.name)}
+        trashTenants={trashTenants}
+        bathroomTenants={bathroomTenants}
+        dishesTenants={dishesTenants}
       />
     );
   }
@@ -40,9 +35,9 @@ const CalendarPage = async () => {
       <div className="w-full max-w-lg">
         <EventCalendar
           isAdmin={isAdmin}
-          maleTenants={maleTenantRows.map((t) => t.name)}
-          bathroomTenants={bathroomTenantRows.map((t) => t.name)}
-          dishesTenants={dishesDutyTenantRows.map((t) => t.name)}
+          trashTenants={trashTenants}
+          bathroomTenants={bathroomTenants}
+          dishesTenants={dishesTenants}
         />
       </div>
     </div>

@@ -1,0 +1,186 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e20]: MyMeadow Dashboard
+  - generic [ref=e21]:
+    - banner [ref=e22]:
+      - generic [ref=e23]:
+        - img "MyMeadow" [ref=e24]
+        - generic [ref=e25]: MyMeadow
+      - generic [ref=e26]:
+        - button "Toggle theme" [ref=e27] [cursor=pointer]:
+          - img [ref=e28]
+        - button "2" [ref=e31] [cursor=pointer]:
+          - img [ref=e32]
+          - generic [ref=e35]: "2"
+        - button "B" [ref=e37] [cursor=pointer]
+    - main [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - generic [ref=e42]:
+              - heading "Utilities" [level=2] [ref=e43]
+              - generic [ref=e44]: Jul 26
+            - generic [ref=e45]:
+              - generic [ref=e46]:
+                - generic [ref=e47]: ⚡
+                - generic [ref=e48]:
+                  - paragraph [ref=e49]: $217
+                  - paragraph [ref=e50]: Electric
+              - generic [ref=e51]:
+                - generic [ref=e52]: 🔥
+                - generic [ref=e53]:
+                  - paragraph [ref=e54]: $73
+                  - paragraph [ref=e55]: Gas
+              - generic [ref=e56]:
+                - generic [ref=e57]: 💧
+                - generic [ref=e58]:
+                  - paragraph [ref=e59]: $0
+                  - paragraph [ref=e60]: Water
+              - generic [ref=e61]:
+                - generic [ref=e62]: 📡
+                - generic [ref=e63]:
+                  - paragraph [ref=e64]: $0
+                  - paragraph [ref=e65]: WiFi
+            - link "View Utilities →" [ref=e66] [cursor=pointer]:
+              - /url: /utilities
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - heading "🍳 Kitchen Inventory" [level=2] [ref=e69]
+              - generic [ref=e70]: 2 low
+            - generic [ref=e71]:
+              - generic [ref=e72]: Cooking Oil
+              - generic [ref=e74]: Fish Sauce
+            - link "View Inventory →" [ref=e76] [cursor=pointer]:
+              - /url: /kitchen-inventory
+          - generic [ref=e77]:
+            - generic [ref=e78]:
+              - heading "🗑️ Trash — This Week" [level=2] [ref=e79]
+              - generic [ref=e80]: Jul 23
+            - paragraph [ref=e81]: Bảo
+            - generic [ref=e82]: 🗑️ Garbage only
+          - generic [ref=e83]:
+            - heading "✨ Bathroom — This Week" [level=2] [ref=e85]
+            - paragraph [ref=e86]: Bảo
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - generic [ref=e91]: 🗑️ Trash
+              - generic [ref=e92]:
+                - button "Auto reminder off" [ref=e93] [cursor=pointer]
+                - button "Send now" [ref=e96] [cursor=pointer]
+            - generic [ref=e97]:
+              - generic [ref=e99]: ✨ Bathroom
+              - generic [ref=e100]:
+                - button "Auto reminder off" [ref=e101] [cursor=pointer]
+                - button "Send now" [ref=e104] [cursor=pointer]
+            - generic [ref=e105]:
+              - generic [ref=e107]: 🍽️ Dishes
+              - generic [ref=e108]:
+                - button "Auto reminder off" [ref=e109] [cursor=pointer]
+                - button "Send now" [ref=e112] [cursor=pointer]
+            - generic [ref=e113]:
+              - generic [ref=e115]: 🏠 Rent
+              - generic [ref=e116]:
+                - button "Auto reminder off" [ref=e117] [cursor=pointer]
+                - button "Send now" [ref=e120] [cursor=pointer]
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - text: Rent due day
+                - spinbutton "Rent due day" [ref=e123]: "1"
+              - generic [ref=e124]:
+                - text: Remind days before
+                - spinbutton "Remind days before" [ref=e125]: "3"
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - button "«" [ref=e129] [cursor=pointer]
+              - button "‹" [ref=e130] [cursor=pointer]
+              - button "July 2026" [ref=e131] [cursor=pointer]
+              - button "›" [ref=e132] [cursor=pointer]
+              - button "»" [ref=e133] [cursor=pointer]
+            - generic [ref=e137]:
+              - generic [ref=e138]:
+                - generic [ref=e139]: Mon
+                - generic [ref=e140]: Tue
+                - generic [ref=e141]: Wed
+                - generic [ref=e142]: Thu
+                - generic [ref=e143]: Fri
+                - generic [ref=e144]: Sat
+                - generic [ref=e145]: Sun
+              - generic [ref=e146]:
+                - button "June 29, 2026" [ref=e147] [cursor=pointer]: "29"
+                - button "June 30, 2026" [ref=e148] [cursor=pointer]: "30"
+                - button "July 1, 2026" [ref=e149] [cursor=pointer]: "1"
+                - button "July 2, 2026" [ref=e150] [cursor=pointer]: "2"
+                - button "July 3, 2026" [ref=e151] [cursor=pointer]: "3"
+                - button "July 4, 2026" [ref=e152] [cursor=pointer]: "4"
+                - button "July 5, 2026" [ref=e153] [cursor=pointer]: "5"
+                - button "July 6, 2026" [ref=e154] [cursor=pointer]: "6"
+                - button "July 7, 2026" [ref=e155] [cursor=pointer]: "7"
+                - button "July 8, 2026" [ref=e156] [cursor=pointer]: "8"
+                - button "July 9, 2026" [ref=e157] [cursor=pointer]: "9"
+                - button "July 10, 2026" [ref=e158] [cursor=pointer]: "10"
+                - button "July 11, 2026" [ref=e159] [cursor=pointer]: "11"
+                - button "July 12, 2026" [ref=e160] [cursor=pointer]: "12"
+                - button "July 13, 2026" [ref=e161] [cursor=pointer]: "13"
+                - button "July 14, 2026" [ref=e162] [cursor=pointer]: "14"
+                - button "July 15, 2026" [ref=e163] [cursor=pointer]: "15"
+                - button "July 16, 2026" [ref=e164] [cursor=pointer]: "16"
+                - button "July 17, 2026" [ref=e165] [cursor=pointer]: "17"
+                - button "July 18, 2026" [ref=e166] [cursor=pointer]: "18"
+                - button "July 19, 2026" [ref=e167] [cursor=pointer]: "19"
+                - button "July 20, 2026" [ref=e168] [cursor=pointer]: "20"
+                - button "July 21, 2026" [ref=e169] [cursor=pointer]: "21"
+                - button "July 22, 2026" [ref=e170] [cursor=pointer]: "22"
+                - button "July 23, 2026" [ref=e171] [cursor=pointer]: "23"
+                - button "July 24, 2026" [ref=e172] [cursor=pointer]: "24"
+                - button "July 25, 2026" [ref=e173] [cursor=pointer]: "25"
+                - button "July 26, 2026" [ref=e174] [cursor=pointer]: "26"
+                - button "July 27, 2026" [ref=e175] [cursor=pointer]: "27"
+                - button "July 28, 2026" [ref=e176] [cursor=pointer]: "28"
+                - button "July 29, 2026" [ref=e177] [cursor=pointer]: "29"
+                - button "July 30, 2026" [ref=e178] [cursor=pointer]: "30"
+                - button "July 31, 2026" [ref=e179] [cursor=pointer]: "31"
+                - button "August 1, 2026" [ref=e180] [cursor=pointer]: "1"
+                - button "August 2, 2026" [ref=e181] [cursor=pointer]: "2"
+        - generic [ref=e182]:
+          - generic [ref=e183]:
+            - heading "Residents" [level=2] [ref=e184]
+            - generic [ref=e185]: "Total: 5"
+          - generic [ref=e186]:
+            - generic [ref=e187]:
+              - generic [ref=e190]: Male (2)
+              - generic [ref=e191]:
+                - generic [ref=e192]: Bảo
+                - generic [ref=e193]: Khoa (placeholder)
+            - generic [ref=e194]:
+              - generic [ref=e197]: Female (3)
+              - generic [ref=e198]:
+                - generic [ref=e199]: Ngân (placeholder)
+                - generic [ref=e200]: Nhi
+                - generic [ref=e201]: Thảo (placeholder)
+        - generic [ref=e202]:
+          - generic [ref=e203]:
+            - heading "Announcements" [level=1] [ref=e204]
+            - generic [ref=e205]:
+              - button "Refresh" [ref=e206] [cursor=pointer]:
+                - img [ref=e207]
+                - text: Refresh
+              - button "+ Add" [ref=e212] [cursor=pointer]
+          - paragraph [ref=e214]: No announcements yet.
+    - navigation [ref=e215]:
+      - link "Home" [ref=e216] [cursor=pointer]:
+        - /url: /admin
+        - text: Home
+      - link "Calendar" [ref=e218] [cursor=pointer]:
+        - /url: /calendar
+        - img [ref=e220]
+        - text: Calendar
+      - link "Utilities" [ref=e222] [cursor=pointer]:
+        - /url: /utilities
+        - text: Utilities
+      - link "Inventory" [ref=e224] [cursor=pointer]:
+        - /url: /kitchen-inventory
+        - img [ref=e226]
+        - text: Inventory
+      - button "More" [ref=e229] [cursor=pointer]:
+        - img [ref=e230]
+        - text: More

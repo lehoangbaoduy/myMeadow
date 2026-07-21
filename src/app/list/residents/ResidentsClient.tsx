@@ -224,6 +224,18 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                   Dish duty
                 </label>
               </div>
+              <div className="flex items-center gap-3 py-1">
+                <input
+                  type="checkbox"
+                  id="trashDuty"
+                  checked={editForm.trashDuty}
+                  onChange={(e) => setEditForm((p) => ({ ...p, trashDuty: e.target.checked }))}
+                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
+                />
+                <label htmlFor="trashDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  Trash duty
+                </label>
+              </div>
               {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
               <div className="flex gap-3">
                 <button onClick={handleSaveEdit} disabled={saving}
@@ -297,6 +309,18 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                 />
                 <label htmlFor="addDishesDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
                   Dish duty
+                </label>
+              </div>
+              <div className="flex items-center gap-3 py-1">
+                <input
+                  type="checkbox"
+                  id="addTrashDuty"
+                  checked={addForm.trashDuty}
+                  onChange={(e) => setAddForm((p) => ({ ...p, trashDuty: e.target.checked }))}
+                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
+                />
+                <label htmlFor="addTrashDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  Trash duty
                 </label>
               </div>
               {addError && <p className="text-red-500 text-sm">{addError}</p>}

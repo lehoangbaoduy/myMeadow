@@ -8,10 +8,10 @@ import { getWeekIndex as getDishesWeekIndex } from "@/lib/dishes-schedule";
  * assignments for the same day.
  */
 
-export function getTrashAssignment(thursday: Date, maleTenants: string[]) {
+export function getTrashAssignment(thursday: Date, trashTenants: string[]) {
   const weekIdx = getWeekIndex(thursday);
-  const tenant = maleTenants.length > 0
-    ? maleTenants[((weekIdx % maleTenants.length) + maleTenants.length) % maleTenants.length]
+  const tenant = trashTenants.length > 0
+    ? trashTenants[((weekIdx % trashTenants.length) + trashTenants.length) % trashTenants.length]
     : "—";
   const hasRecycle = weekIdx % 2 === 0;
   return { tenant, hasRecycle };

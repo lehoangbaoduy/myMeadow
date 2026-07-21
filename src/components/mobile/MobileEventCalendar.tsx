@@ -27,7 +27,7 @@ interface Birthday {
 interface Props {
   isAdmin?: boolean;
   birthdays?: Birthday[];
-  maleTenants?: string[];
+  trashTenants?: string[];
   bathroomTenants?: string[];
   dishesTenants?: string[];
 }
@@ -42,7 +42,7 @@ const REMINDER_CARDS: { type: ReminderType; label: string; emoji: string; accent
 export default function MobileEventCalendar({
   isAdmin = false,
   birthdays = [],
-  maleTenants = [],
+  trashTenants = [],
   bathroomTenants = [],
   dishesTenants = [],
 }: Props) {
@@ -87,7 +87,7 @@ export default function MobileEventCalendar({
   const selectedSaturday = selectedDate.getDay() === 6 ? selectedDate : null;
   const selectedSunday = selectedDate.getDay() === 0 ? selectedDate : null;
 
-  const clickedTrash = selectedThursday ? getTrashAssignment(selectedThursday, maleTenants) : null;
+  const clickedTrash = selectedThursday ? getTrashAssignment(selectedThursday, trashTenants) : null;
   const clickedBathroomThursday = selectedThursday ? getBathroomAssignment(selectedThursday, bathroomTenants) : null;
   const clickedBathroomSaturday = selectedSaturday
     ? getBathroomAssignment(getThursdayOfSameWeek(selectedSaturday), bathroomTenants)
@@ -175,7 +175,7 @@ export default function MobileEventCalendar({
             if (view !== "month") return null;
             const classes: string[] = [];
             if (date.getDay() === 4) {
-              const { hasRecycle } = getTrashAssignment(date, maleTenants);
+              const { hasRecycle } = getTrashAssignment(date, trashTenants);
               classes.push(hasRecycle ? "thursday-recycle" : "thursday-garbage");
             }
             if (date.getDay() === 6) classes.push("bathroom-tile");

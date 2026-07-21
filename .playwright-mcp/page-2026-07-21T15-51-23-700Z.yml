@@ -1,0 +1,155 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - img "MyMeadow" [ref=e5]
+        - generic [ref=e6]: MyMeadow
+      - generic [ref=e7]:
+        - button "Toggle theme" [ref=e113] [cursor=pointer]:
+          - img [ref=e114]
+        - button "2" [ref=e116] [cursor=pointer]:
+          - img [ref=e10]
+          - generic [ref=e117]: "2"
+        - button "B" [ref=e14] [cursor=pointer]
+    - main [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - heading "Residents" [level=1] [ref=e18]
+          - button "+ Add" [ref=e19] [cursor=pointer]
+        - generic [ref=e20]:
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - generic [ref=e23]:
+                - generic [ref=e25]: Bảo
+                - generic [ref=e26]:
+                  - generic [ref=e27]: Male
+                  - generic [ref=e28]: Aug 24, 2000
+              - generic [ref=e29]: Active
+            - generic [ref=e30]:
+              - button "Requests" [ref=e31] [cursor=pointer]
+              - button "Edit" [active] [ref=e32] [cursor=pointer]
+              - button "Deactivate" [ref=e33] [cursor=pointer]
+              - button "Assign Room" [ref=e34] [cursor=pointer]
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]:
+                - generic [ref=e38]:
+                  - generic [ref=e39]: Khoa
+                  - generic [ref=e40]: Placeholder
+                - generic [ref=e41]:
+                  - generic [ref=e42]: Male
+                  - generic [ref=e43]: —
+              - generic [ref=e44]: Inactive
+            - generic [ref=e45]:
+              - button "Requests" [ref=e46] [cursor=pointer]
+              - button "Edit" [ref=e47] [cursor=pointer]
+              - button "Activate" [ref=e48] [cursor=pointer]
+              - button "Delete" [ref=e49] [cursor=pointer]
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - generic [ref=e53]:
+                  - generic [ref=e54]: Ngân
+                  - generic [ref=e55]: Placeholder
+                - generic [ref=e56]:
+                  - generic [ref=e57]: Female
+                  - generic [ref=e58]: —
+              - generic [ref=e59]: Inactive
+            - generic [ref=e60]:
+              - button "Requests" [ref=e61] [cursor=pointer]
+              - button "Edit" [ref=e62] [cursor=pointer]
+              - button "Activate" [ref=e63] [cursor=pointer]
+              - button "Delete" [ref=e64] [cursor=pointer]
+          - generic [ref=e65]:
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - generic [ref=e69]: Nhi
+                - generic [ref=e70]:
+                  - generic [ref=e71]: Female
+                  - generic [ref=e72]: Sep 16, 1996
+              - generic [ref=e73]: Active
+            - generic [ref=e74]:
+              - button "Requests" [ref=e75] [cursor=pointer]
+              - button "Edit" [ref=e76] [cursor=pointer]
+              - button "Deactivate" [ref=e77] [cursor=pointer]
+              - button "Assign Room" [ref=e78] [cursor=pointer]
+          - generic [ref=e79]:
+            - generic [ref=e80]:
+              - generic [ref=e81]:
+                - generic [ref=e82]:
+                  - generic [ref=e83]: Thảo
+                  - generic [ref=e84]: Placeholder
+                - generic [ref=e85]:
+                  - generic [ref=e86]: Female
+                  - generic [ref=e87]: —
+              - generic [ref=e88]: Inactive
+            - generic [ref=e89]:
+              - button "Requests" [ref=e90] [cursor=pointer]
+              - button "Edit" [ref=e91] [cursor=pointer]
+              - button "Activate" [ref=e92] [cursor=pointer]
+              - button "Delete" [ref=e93] [cursor=pointer]
+    - navigation [ref=e94]:
+      - link "Home" [ref=e95] [cursor=pointer]:
+        - /url: /admin
+        - text: Home
+      - link "Calendar" [ref=e97] [cursor=pointer]:
+        - /url: /calendar
+        - img [ref=e99]
+        - text: Calendar
+      - link "Utilities" [ref=e101] [cursor=pointer]:
+        - /url: /utilities
+        - text: Utilities
+      - link "Inventory" [ref=e103] [cursor=pointer]:
+        - /url: /kitchen-inventory
+        - img [ref=e105]
+        - text: Inventory
+      - button "More" [ref=e108] [cursor=pointer]:
+        - img [ref=e109]
+        - text: More
+  - alert [ref=e118]
+  - generic [ref=e121]:
+    - generic [ref=e122]:
+      - heading "Edit Resident" [level=2] [ref=e124]
+      - button "×" [ref=e125] [cursor=pointer]
+    - generic [ref=e127]:
+      - generic [ref=e128]:
+        - generic [ref=e129]: Name
+        - textbox [ref=e130]: Bảo
+      - generic [ref=e131]:
+        - generic [ref=e132]: Nickname
+        - textbox [ref=e133]
+      - generic [ref=e134]:
+        - generic [ref=e135]: Date of Birth
+        - textbox [ref=e136]: 2000-08-24
+      - generic [ref=e137]:
+        - generic [ref=e138]: Gender
+        - combobox [ref=e139]:
+          - option "Male" [selected]
+          - option "Female"
+      - generic [ref=e140]:
+        - generic [ref=e141]: Room Number
+        - textbox [ref=e142]
+      - generic [ref=e143]:
+        - generic [ref=e144]: Phone
+        - textbox "+1 555 000 0000" [ref=e145]: "4196999534"
+      - generic [ref=e146]:
+        - generic [ref=e147]: Email
+        - textbox "tenant@example.com" [ref=e148]: kmktag904@gmail.com
+      - generic [ref=e149]:
+        - generic [ref=e150]: Notes
+        - textbox [ref=e151]
+      - generic [ref=e152]:
+        - generic [ref=e153]: Monthly Rent ($)
+        - spinbutton [ref=e154]
+      - generic [ref=e155]:
+        - checkbox "Bathroom duty" [checked] [ref=e156]
+        - generic [ref=e157]: Bathroom duty
+      - generic [ref=e158]:
+        - checkbox "Dish duty" [checked] [ref=e159]
+        - generic [ref=e160]: Dish duty
+      - generic [ref=e161]:
+        - checkbox "Trash duty" [checked] [ref=e162]
+        - generic [ref=e163]: Trash duty
+      - generic [ref=e164]:
+        - button "Save Changes" [ref=e165] [cursor=pointer]
+        - button "Cancel" [ref=e166] [cursor=pointer]

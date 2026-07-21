@@ -50,7 +50,7 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, dob, gender, roomNumber, phone, email, notes, nickname, bathroomDuty, dishesDuty } = body;
+  const { name, dob, gender, roomNumber, phone, email, notes, nickname, bathroomDuty, dishesDuty, trashDuty } = body;
 
   const financialParsed = financialFieldsSchema.safeParse({
     utilityShare: body.utilityShare,
@@ -74,6 +74,7 @@ export async function PUT(
       ...(nickname !== undefined && { nickname }),
       ...(isAdmin && bathroomDuty !== undefined && { bathroomDuty }),
       ...(isAdmin && dishesDuty !== undefined && { dishesDuty }),
+      ...(isAdmin && trashDuty !== undefined && { trashDuty }),
       ...(isAdmin && utilityShare !== undefined && { utilityShare }),
       ...(isAdmin && rentAmount !== undefined && { rentAmount }),
     },

@@ -42,6 +42,7 @@ model Tenant {
   notes               String?
   bathroomDuty        Boolean              @default(false)
   dishesDuty          Boolean              @default(true)
+  trashDuty           Boolean              @default(false)
   utilityShare        Float                @default(1)
   rentAmount          Float?
   userId              Int                  @unique

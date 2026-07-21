@@ -9,7 +9,17 @@
       "Bash(mkdir -p \"/home/lehoa/projects/myMeadow/src/app/api/tenants/[id]/assign\")",
       "Bash(npx next *)",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(fuser -k 3000/tcp)",
+      "Bash(nohup npm run dev)",
+      "mcp__playwright__browser_tabs",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate"
     ],
     "additionalDirectories": [
       "/home/lehoa/projects/myMeadow/src/app/api/tenants/[id]"

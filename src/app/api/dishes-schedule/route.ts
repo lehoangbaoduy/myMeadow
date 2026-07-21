@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getDishesDutyTenants } from "@/lib/dishes-duty";
+import { getDishesDutyTenants } from "@/lib/duty-tenants";
 import {
   getSundaysInMonth,
   generateSchedule,

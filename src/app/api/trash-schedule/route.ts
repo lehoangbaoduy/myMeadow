@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getTrashDutyTenants } from "@/lib/duty-tenants";
 import {
   getThursdaysInMonth,
   generateSchedule,
@@ -19,12 +20,7 @@ export async function GET(req: NextRequest) {
 
   const thursdays = getThursdaysInMonth(year, month);
 
-  // Get male tenants from DB
-  const maleTenants = await prisma.tenant.findMany({
-    where: { gender: "MALE" },
-    orderBy: { id: "asc" },
-    select: { name: true },
-  });
+  const trashTenants = await getTrashDutyTenants();
 
   // Get DB overrides for this window
   const startOfMonth = new Date(year, month, 1);
@@ -40,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   const generated = generateSchedule(
     thursdays,
-    maleTenants.map((t) => t.name)
+    trashTenants.map((t) => t.name)
   );
 
   const overrideData = dbOverrides.map((o) => ({
