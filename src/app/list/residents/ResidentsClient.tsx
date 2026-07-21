@@ -14,6 +14,7 @@ interface TenantRow {
   notes: string | null;
   isActive: boolean;
   bathroomDuty: boolean;
+  dishesDuty: boolean;
   rentAmount: number | null;
   createdAt: Date;
   isPlaceholder: boolean;
@@ -43,6 +44,7 @@ interface EditForm {
   email: string;
   notes: string;
   bathroomDuty: boolean;
+  dishesDuty: boolean;
   rentAmount: string;
 }
 
@@ -53,6 +55,7 @@ interface AddPlaceholderForm {
   rentAmount: string;
   notes: string;
   bathroomDuty: boolean;
+  dishesDuty: boolean;
 }
 
 const emptyAddForm: AddPlaceholderForm = {
@@ -62,6 +65,7 @@ const emptyAddForm: AddPlaceholderForm = {
   rentAmount: "",
   notes: "",
   bathroomDuty: false,
+  dishesDuty: true,
 };
 
 const inputClass =
@@ -72,7 +76,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
   const [tenants, setTenants] = useState(initialTenants);
   const [pendingMap] = useState(initialPendingMap);
   const [editingTenant, setEditingTenant] = useState<TenantRow | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ name: "", nickname: "", dob: "", gender: "MALE", roomNumber: "", phone: "", email: "", notes: "", bathroomDuty: true, rentAmount: "" });
+  const [editForm, setEditForm] = useState<EditForm>({ name: "", nickname: "", dob: "", gender: "MALE", roomNumber: "", phone: "", email: "", notes: "", bathroomDuty: true, dishesDuty: true, rentAmount: "" });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -110,6 +114,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
       email: t.email ?? "",
       notes: t.notes ?? "",
       bathroomDuty: t.bathroomDuty,
+      dishesDuty: t.dishesDuty,
       rentAmount: t.rentAmount != null ? String(t.rentAmount) : "",
     });
     setSaveError(null);
@@ -136,6 +141,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
         email: editForm.email || null,
         notes: editForm.notes || null,
         bathroomDuty: editForm.bathroomDuty,
+        dishesDuty: editForm.dishesDuty,
         rentAmount: editForm.rentAmount === "" ? null : Number(editForm.rentAmount),
       }),
     });
@@ -177,6 +183,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
         notes: addForm.notes || null,
         rentAmount: addForm.rentAmount === "" ? null : Number(addForm.rentAmount),
         bathroomDuty: addForm.bathroomDuty,
+        dishesDuty: addForm.dishesDuty,
       }),
     });
     setAdding(false);
@@ -450,6 +457,18 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                   Bathroom duty
                 </label>
               </div>
+              <div className="flex items-center gap-3 py-1">
+                <input
+                  type="checkbox"
+                  id="dishesDuty"
+                  checked={editForm.dishesDuty}
+                  onChange={(e) => setEditForm((p) => ({ ...p, dishesDuty: e.target.checked }))}
+                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
+                />
+                <label htmlFor="dishesDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  Dish duty
+                </label>
+              </div>
               {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
               <div className="flex gap-3">
                 <button onClick={handleSaveEdit} disabled={saving}
@@ -511,6 +530,18 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                 />
                 <label htmlFor="addBathroomDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
                   Bathroom duty
+                </label>
+              </div>
+              <div className="flex items-center gap-3 py-1">
+                <input
+                  type="checkbox"
+                  id="addDishesDuty"
+                  checked={addForm.dishesDuty}
+                  onChange={(e) => setAddForm((p) => ({ ...p, dishesDuty: e.target.checked }))}
+                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
+                />
+                <label htmlFor="addDishesDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                  Dish duty
                 </label>
               </div>
               {addError && <p className="text-red-500 text-sm">{addError}</p>}

@@ -60,6 +60,7 @@ export async function POST(
         rentAmount: placeholderTenant.rentAmount,
         utilityShare: placeholderTenant.utilityShare,
         bathroomDuty: placeholderTenant.bathroomDuty,
+        dishesDuty: placeholderTenant.dishesDuty,
       },
     }),
     prisma.trashAssignment.deleteMany({ where: { tenantId: placeholderTenantId } }),

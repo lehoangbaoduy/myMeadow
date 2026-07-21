@@ -3,7 +3,11 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import Anthropic from "@anthropic-ai/sdk";
 
-const client = new Anthropic();
+let client: Anthropic | null = null;
+function getAnthropicClient(): Anthropic {
+  if (!client) client = new Anthropic();
+  return client;
+}
 
 const SYSTEM_PROMPT = `You are an expert utility bill parser. Extract structured data from the provided utility bill PDF.
 
@@ -54,8 +58,15 @@ export async function POST(req: NextRequest) {
 
   const userPrompt = `This is a ${utilityType} utility bill. Extract the billing data.`;
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: "OCR is not configured: ANTHROPIC_API_KEY is missing. Set it in .env and restart the server." },
+      { status: 500 }
+    );
+  }
+
   try {
-    const message = await client.messages.create({
+    const message = await getAnthropicClient().messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 512,
       system: SYSTEM_PROMPT,

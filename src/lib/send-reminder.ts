@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getWeekIndex, getThursdayOfWeek } from "@/lib/trash-schedule";
 import { getWeekIndex as getDishesWeekIndex, getSundayOfWeek } from "@/lib/dishes-schedule";
+import { getDishesDutyTenants } from "@/lib/dishes-duty";
 import { Resend } from "resend";
 
 let resend: Resend | null = null;
@@ -105,12 +106,9 @@ export async function sendReminder(type: "trash" | "bathroom" | "dishes"): Promi
   } else {
     const sunday = getSundayOfWeek(today);
     const weekIdx = getDishesWeekIndex(sunday);
-    const activeTenants = await prisma.tenant.findMany({
-      where: { isActive: true },
-      orderBy: { id: "asc" },
-    });
-    if (activeTenants.length === 0) throw new Error("No active tenants found");
-    tenant = pickByWeekIndex(activeTenants, weekIdx);
+    const dishesDutyTenants = await getDishesDutyTenants();
+    if (dishesDutyTenants.length === 0) throw new Error("No residents on dish duty");
+    tenant = pickByWeekIndex(dishesDutyTenants, weekIdx);
     const dateStr = sunday.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
     content = `Hey ${tenant.name}! 🍽️ Just a friendly reminder — it's your turn on dish duty this week (${dateStr}). Please keep the sink and drying rack clear. Thank you for keeping our kitchen tidy! 🍽️`;
     subject = `🍽️ Dish Duty Reminder — ${dateStr}`;

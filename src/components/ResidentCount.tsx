@@ -1,11 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { isPlaceholderClerkId, PLACEHOLDER_CLERK_PREFIX } from "@/lib/tenant-placeholder";
 
 const ResidentCount = async () => {
-  const tenants = await prisma.tenant.findMany({
-    where: { isActive: true },
-    select: { name: true, gender: true },
+  const tenantRows = await prisma.tenant.findMany({
+    // Active residents plus reserved placeholder rooms both count toward the roster.
+    where: { OR: [{ isActive: true }, { user: { clerkId: { startsWith: PLACEHOLDER_CLERK_PREFIX } } }] },
+    select: { name: true, gender: true, user: { select: { clerkId: true } } },
     orderBy: { name: "asc" },
   });
+  const tenants = tenantRows.map(({ user, ...t }) => ({ ...t, isPlaceholder: isPlaceholderClerkId(user.clerkId) }));
 
   const males = tenants.filter((t) => t.gender === "MALE");
   const females = tenants.filter((t) => t.gender === "FEMALE");
@@ -30,6 +33,7 @@ const ResidentCount = async () => {
             {males.map((t) => (
               <li key={t.name} className="text-xs text-gray-500 dark:text-gray-400 pl-5">
                 {t.name}
+                {t.isPlaceholder && <span className="italic text-gray-400 dark:text-gray-500"> (placeholder)</span>}
               </li>
             ))}
           </ul>
@@ -46,6 +50,7 @@ const ResidentCount = async () => {
             {females.map((t) => (
               <li key={t.name} className="text-xs text-gray-500 dark:text-gray-400 pl-5">
                 {t.name}
+                {t.isPlaceholder && <span className="italic text-gray-400 dark:text-gray-500"> (placeholder)</span>}
               </li>
             ))}
           </ul>

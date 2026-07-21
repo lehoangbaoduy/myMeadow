@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getDishesDutyTenants } from "@/lib/dishes-duty";
 import {
   getSundaysInMonth,
   generateSchedule,
@@ -20,11 +21,7 @@ export async function GET(req: NextRequest) {
 
   const sundays = getSundaysInMonth(year, month);
 
-  const activeTenants = await prisma.tenant.findMany({
-    where: { isActive: true },
-    orderBy: { id: "asc" },
-    select: { name: true },
-  });
+  const dutyTenants = await getDishesDutyTenants();
 
   const startOfMonth = new Date(year, month, 1);
   const endOfMonth = new Date(year, month + 1, 0);
@@ -39,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   const generated = generateSchedule(
     sundays,
-    activeTenants.map((t) => t.name)
+    dutyTenants.map((t) => t.name)
   );
 
   const overrideData = dbOverrides.map((o) => ({

@@ -5,12 +5,13 @@ import DashboardContent from "@/components/DashboardContent";
 import EventCalendar from "@/components/EventCalendar";
 import ResidentCount from "@/components/ResidentCount";
 import Annoucements from "@/components/Announcements";
+import { getDishesDutyTenants } from "@/lib/dishes-duty";
 
 const ResidentsPage = async () => {
   const currentUser = await getCurrentUser();
   if (!currentUser) redirect("/sign-in");
 
-  const [bills, tenantDobs, maleTenantRows, bathroomTenantRows] = await Promise.all([
+  const [bills, tenantDobs, maleTenantRows, bathroomTenantRows, dishesDutyTenantRows] = await Promise.all([
     prisma.utilityBill.findMany({ orderBy: [{ year: "asc" }, { month: "asc" }] }),
     prisma.tenant.findMany({
       where: { isActive: true, dob: { not: null } },
@@ -26,6 +27,7 @@ const ResidentsPage = async () => {
       orderBy: { id: "asc" },
       select: { name: true },
     }),
+    getDishesDutyTenants(),
   ]);
 
   const latestBill = bills.length > 0 ? bills[bills.length - 1] : null;
@@ -49,6 +51,7 @@ const ResidentsPage = async () => {
           birthdays={birthdays}
           maleTenants={maleTenantRows.map((t) => t.name)}
           bathroomTenants={bathroomTenantRows.map((t) => t.name)}
+          dishesTenants={dishesDutyTenantRows.map((t) => t.name)}
         />
         <ResidentCount />
         <Annoucements />

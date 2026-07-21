@@ -29,6 +29,7 @@ const createPlaceholderSchema = z.object({
   notes: z.string().optional().nullable(),
   rentAmount: z.number().finite().nonnegative().optional().nullable(),
   bathroomDuty: z.boolean().optional(),
+  dishesDuty: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid resident data", details: parsed.error.flatten() }, { status: 400 });
   }
-  const { name, gender, dob, roomNumber, notes, rentAmount, bathroomDuty } = parsed.data;
+  const { name, gender, dob, roomNumber, notes, rentAmount, bathroomDuty, dishesDuty } = parsed.data;
 
   // This endpoint always creates a placeholder resident (a reserved room slot with no
   // real Clerk login). It's kept inactive by default so it never enters the trash/bathroom/
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
       notes: notes ?? null,
       rentAmount: rentAmount ?? null,
       bathroomDuty: bathroomDuty ?? false,
+      dishesDuty: dishesDuty ?? true,
       isActive: false,
       userId: placeholderUser.id,
     },
