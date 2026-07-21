@@ -7,7 +7,9 @@
       "Bash(node /tmp/claude-1000/-home-lehoa-projects-myMeadow/78c4bd56-8280-4825-b784-69eb7c7c24ee/scratchpad/apply-migration.js)",
       "Bash(grep -nE \"libsql://|turso.io|eyJ[A-Za-z0-9_-]{20,}\" README.md prisma/schema.prisma prisma.config.ts)",
       "Bash(mkdir -p \"/home/lehoa/projects/myMeadow/src/app/api/tenants/[id]/assign\")",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)"
     ],
     "additionalDirectories": [
       "/home/lehoa/projects/myMeadow/src/app/api/tenants/[id]"

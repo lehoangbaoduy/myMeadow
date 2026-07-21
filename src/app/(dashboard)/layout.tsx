@@ -5,6 +5,8 @@ import { Inter } from "next/font/google";
 import "../globals.css";
 import Menu from "@/components/Menu";
 import Navbar from "@/components/Navbar";
+import MobileShell from "@/components/mobile/MobileShell";
+import { getViewMode } from "@/lib/view-mode";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,11 +16,19 @@ export const metadata: Metadata = {
   icons: { icon: "/logo.png" },
 };
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const viewMode = await getViewMode();
+
+  // Mobile mode gets its own shell entirely. Anything else (including a deep link that
+  // skipped the chooser) falls back to the existing desktop shell, unchanged.
+  if (viewMode === "mobile") {
+    return <MobileShell>{children}</MobileShell>;
+  }
+
   return (
     <div className="h-screen flex bg-meadowLight dark:bg-darkBg overflow-hidden">
       {/* LEFT SIDEBAR */}

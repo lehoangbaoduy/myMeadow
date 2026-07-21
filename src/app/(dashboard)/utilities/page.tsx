@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { getViewMode } from "@/lib/view-mode";
 import type { UtilityDocument } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { isPlaceholderClerkId, PLACEHOLDER_CLERK_PREFIX } from "@/lib/tenant-placeholder";
 import UtilitiesClient from "./UtilitiesClient";
+import MobileUtilitiesClient from "@/components/mobile/MobileUtilitiesClient";
 
 const now = new Date();
 
@@ -37,9 +39,11 @@ export default async function UtilitiesPage() {
   }));
 
   const tenantName = currentUser.name ?? null;
+  const isMobile = (await getViewMode()) === "mobile";
+  const Client = isMobile ? MobileUtilitiesClient : UtilitiesClient;
 
   return (
-    <UtilitiesClient
+    <Client
       isAdmin={isAdmin}
       bills={bills}
       documents={documents}

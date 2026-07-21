@@ -1,109 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
 } from "recharts";
-
-// ── Configuration ──────────────────────────────────────────
-const MORTGAGE = 2000;
-
-const RENT = {
-  duongNgan: 600,
-  cuong: 500,
-  khaoThao: 550,
-};
-
-// Updated: Nhi = 0.5 shares → total = 6.5
-const TOTAL_SHARES = 6.5;
-const UTILITY_SHARES = {
-  duongNgan: 2 / TOTAL_SHARES,
-  cuong:     1 / TOTAL_SHARES,
-  khaoThao:  2 / TOTAL_SHARES,  // Khoa + Thảo = 2
-  bao:       1 / TOTAL_SHARES,
-  nhi:       0.5 / TOTAL_SHARES,
-};
-
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const PIE_COLORS = ["#F97316","#3B82F6","#10B981","#EF4444","#8B5CF6","#F59E0B"];
-
-interface UtilityBill {
-  month: number; year: number;
-  electric: number; gas: number; water: number; wifi: number;
-}
-
-interface Row { label: string; sign: "+" | "-"; amount: number; }
-
-function calcGross(bill: UtilityBill | null) {
-  const totalUtil = bill ? bill.electric + bill.gas + bill.water + bill.wifi : 0;
-
-  const expenses: Row[] = [
-    { label: "Mortgage",  sign: "-", amount: MORTGAGE },
-    { label: "Electric",  sign: "-", amount: bill?.electric ?? 0 },
-    { label: "Gas",       sign: "-", amount: bill?.gas ?? 0 },
-    { label: "Water",     sign: "-", amount: bill?.water ?? 0 },
-    { label: "WiFi",      sign: "-", amount: bill?.wifi ?? 0 },
-  ];
-
-  const incomes: Row[] = [
-    { label: "Dương & Ngân — Rent",       sign: "+", amount: RENT.duongNgan },
-    { label: "Dương & Ngân — Utils 2/6.5",sign: "+", amount: totalUtil * UTILITY_SHARES.duongNgan },
-    { label: "Cường — Rent",              sign: "+", amount: RENT.cuong },
-    { label: "Cường — Utils 1/6.5",       sign: "+", amount: totalUtil * UTILITY_SHARES.cuong },
-    { label: "Khoa & Thảo — Rent",        sign: "+", amount: RENT.khaoThao },
-    { label: "Khoa & Thảo — Utils 2/6.5", sign: "+", amount: totalUtil * UTILITY_SHARES.khaoThao }
-  ];
-
-  const rows = [...incomes, ...expenses];
-  const gross = rows.reduce((sum, r) => r.sign === "+" ? sum + r.amount : sum - r.amount, 0);
-  return { rows, gross, expenses };
-}
+import { useManagementData } from "@/hooks/useManagementData";
+import { MONTHS, PIE_COLORS, MORTGAGE_AMOUNT } from "@/lib/management-finance";
 
 export default function ManagementClient() {
-  const today = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [bill, setBill] = useState<UtilityBill | null>(null);
-  const [yearlyBills, setYearlyBills] = useState<(UtilityBill | null)[]>([]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setSubmitted(false);
-
-    const res = await fetch(`/api/utilities?month=${selectedMonth}&year=${selectedYear}`);
-    const allBills: UtilityBill[] = res.ok ? await res.json() : [];
-    setBill(allBills.find((b) => b.month === selectedMonth && b.year === selectedYear) ?? null);
-
-    const yearly: (UtilityBill | null)[] = [];
-    for (let m = 1; m <= 12; m++) {
-      yearly.push(allBills.find((b) => b.month === m && b.year === selectedYear) ?? null);
-    }
-    setYearlyBills(yearly);
-    setLoading(false);
-    setSubmitted(true);
-  };
-
-  const years = Array.from({ length: 5 }, (_, i) => today.getFullYear() - 2 + i);
-
-  const { rows, gross, expenses } = calcGross(bill);
-  const pieData = expenses.map((e) => ({ name: e.label, value: parseFloat(e.amount.toFixed(2)) }));
-  const totalExpenses = pieData.reduce((s, d) => s + d.value, 0);
-
-  const yearlyGross = yearlyBills.map((b, idx) => {
-    const isFuture = new Date(selectedYear, idx, 1) > today;
-    if (isFuture) return { month: MONTHS[idx], gross: 0, grossAbs: 0, isPositive: true, future: true };
-    const g = parseFloat(calcGross(b).gross.toFixed(2));
-    return { month: MONTHS[idx], gross: g, grossAbs: Math.abs(g), isPositive: g >= 0, future: false };
-  });
-  const totalYearlyGross = yearlyGross.reduce((s, m) => s + m.gross, 0);
-  const lineData = yearlyGross.filter((m) => !m.future);
-
-  const fmt = (n: number) =>
-    n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+  const {
+    selectedMonth, setSelectedMonth,
+    selectedYear, setSelectedYear,
+    submitted, loading, bill, yearlyBills,
+    handleSubmit, years, rows, gross,
+    pieData, totalExpenses, yearlyGross, totalYearlyGross, lineData, fmt,
+  } = useManagementData();
 
   const inputClass = "px-3 py-2 rounded-lg border border-meadowBorder dark:border-darkBorder bg-white dark:bg-darkSurface text-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-meadowOrange/40 transition-all";
 
@@ -338,7 +249,7 @@ export default function ManagementClient() {
             </div>
 
             <p className="text-xs text-gray-400 mt-3">
-              Mortgage = ${MORTGAGE.toLocaleString()}/mo · Shares (6.5 total): Dương+Ngân 2 · Cường 1 · Khoa+Thảo 2 · Bảo 1 · Nhi 0.5
+              Mortgage = ${MORTGAGE_AMOUNT.toLocaleString()}/mo · Shares (6.5 total): Dương+Ngân 2 · Cường 1 · Khoa+Thảo 2 · Bảo 1 · Nhi 0.5
             </p>
           </section>
         </>

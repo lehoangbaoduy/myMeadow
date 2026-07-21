@@ -1,26 +1,10 @@
-import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getHeaderUserInfo } from "@/lib/auth";
 import ThemeToggle from "./ThemeToggle";
 import NotificationBell from "./NotificationBell";
 import NavbarUserMenu from "./NavbarUserMenu";
 
 const Navbar = async () => {
-  const currentUser = await getCurrentUser();
-
-  // Fetch avatar if tenant has one
-  let avatarUrl: string | null = null;
-  if (currentUser?.tenantId) {
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: currentUser.tenantId },
-      select: { avatarData: true },
-    });
-    if (tenant?.avatarData) {
-      avatarUrl = `/api/tenants/${currentUser.tenantId}/avatar`;
-    }
-  }
-
-  const name = currentUser?.name ?? "Guest";
-  const initial = name.charAt(0).toUpperCase();
+  const { name, role, avatarUrl, initial } = await getHeaderUserInfo();
 
   return (
     <div className="flex items-center justify-between px-5 py-3 bg-white dark:bg-darkSurface border-b border-meadowBorder dark:border-darkBorder sticky top-0 z-40 backdrop-blur-sm bg-white/95 dark:bg-darkSurface/95">
@@ -46,14 +30,15 @@ const Navbar = async () => {
             {name}
           </span>
           <span className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">
-            {currentUser?.role === "ADMIN" ? "Administrator" : "Tenant"}
+            {role === "ADMIN" ? "Administrator" : "Tenant"}
           </span>
         </div>
         <NavbarUserMenu
           userName={name}
-          userRole={currentUser?.role ?? "TENANT"}
+          userRole={role}
           avatarUrl={avatarUrl}
           tenantInitial={initial}
+          viewMode="pc"
         />
       </div>
     </div>

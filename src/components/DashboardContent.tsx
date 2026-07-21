@@ -9,7 +9,7 @@ import {
 } from "recharts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface UtilityBillRow {
+export interface UtilityBillRow {
   id: number; month: number; year: number;
   electric: number; electricUsage: number | null; electricPrice: number | null;
   gas: number; gasUsage: number | null; gasPrice: number | null;
@@ -25,13 +25,13 @@ interface Props {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = { Electric: "#F59E0B", Gas: "#EF4444", Water: "#06B6D4", WiFi: "#8B5CF6" };
-const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+export const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const TODAY = new Date();
-const CUR_YEAR = TODAY.getFullYear();
-const CUR_MONTH = TODAY.getMonth() + 1;
+export const CUR_YEAR = TODAY.getFullYear();
+export const CUR_MONTH = TODAY.getMonth() + 1;
 const YEAR_OPTIONS = Array.from({ length: CUR_YEAR - 2024 + 1 }, (_, i) => 2024 + i);
 
-function fmtLabel(month: number, year: number) {
+export function fmtLabel(month: number, year: number) {
   return `${MONTH_NAMES[month - 1]} ${String(year).slice(2)}`;
 }
 
@@ -120,7 +120,7 @@ function EmptyState({ message }: { message?: string }) {
 }
 
 // ─── BillChart (Pie) ──────────────────────────────────────────────────────────
-function BillChartSection({ isAdmin, bills, onUpdated }: { isAdmin: boolean; bills: UtilityBillRow[]; onUpdated: () => void }) {
+export function BillChartSection({ isAdmin, bills, onUpdated }: { isAdmin: boolean; bills: UtilityBillRow[]; onUpdated: () => void }) {
   const [pieYear, setPieYear] = useState(CUR_YEAR);
   const [pieMonth, setPieMonth] = useState(CUR_MONTH);
   const [editing, setEditing] = useState(false);
@@ -246,7 +246,7 @@ function BillChartSection({ isAdmin, bills, onUpdated }: { isAdmin: boolean; bil
 }
 
 // ─── Usage Chart (Bar) ────────────────────────────────────────────────────────
-function UsageChartSection({ isAdmin, bills, onUpdated }: { isAdmin: boolean; bills: UtilityBillRow[]; onUpdated: () => void }) {
+export function UsageChartSection({ isAdmin, bills, onUpdated }: { isAdmin: boolean; bills: UtilityBillRow[]; onUpdated: () => void }) {
   const [chartYear, setChartYear] = useState(CUR_YEAR);
   const [editing, setEditing] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -350,7 +350,7 @@ function UsageChartSection({ isAdmin, bills, onUpdated }: { isAdmin: boolean; bi
 }
 
 // ─── Price Chart (Line) ───────────────────────────────────────────────────────
-function PriceChartSection({ isAdmin, bills, onUpdated }: { isAdmin: boolean; bills: UtilityBillRow[]; onUpdated: () => void }) {
+export function PriceChartSection({ isAdmin, bills, onUpdated }: { isAdmin: boolean; bills: UtilityBillRow[]; onUpdated: () => void }) {
   const [chartYear, setChartYear] = useState(CUR_YEAR);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState(false);

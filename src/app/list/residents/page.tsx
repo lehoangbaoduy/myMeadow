@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { getViewMode } from "@/lib/view-mode";
 import { redirect } from "next/navigation";
 import { isPlaceholderClerkId } from "@/lib/tenant-placeholder";
 import ResidentsClient from "./ResidentsClient";
+import MobileResidentsClient from "@/components/mobile/MobileResidentsClient";
 
 export default async function ResidentsPage() {
   const currentUser = await getCurrentUser();
@@ -30,5 +32,8 @@ export default async function ResidentsPage() {
     pendingMap[row.tenantId] = row._count.id;
   }
 
-  return <ResidentsClient tenants={tenants} pendingMap={pendingMap} />;
+  const isMobile = (await getViewMode()) === "mobile";
+  return isMobile
+    ? <MobileResidentsClient tenants={tenants} pendingMap={pendingMap} />
+    : <ResidentsClient tenants={tenants} pendingMap={pendingMap} />;
 }

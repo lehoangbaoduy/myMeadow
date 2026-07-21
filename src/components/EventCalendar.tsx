@@ -1,56 +1,20 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import { getThursdayOfWeek, getThursdaysInMonth } from "@/lib/trash-schedule";
+import { getSundayOfWeek } from "@/lib/dishes-schedule";
 import {
-  getWeekIndex,
-  getThursdayOfWeek,
-  getThursdaysInMonth,
-} from "@/lib/trash-schedule";
-import { getWeekIndex as getDishesWeekIndex, getSundayOfWeek } from "@/lib/dishes-schedule";
+  getTrashAssignment,
+  getBathroomAssignment,
+  getDishesAssignment,
+  getThursdayOfSameWeek,
+  isSameDay,
+} from "@/lib/rotation-assignments";
+import { useReminderControls } from "@/hooks/useReminderControls";
 
 type ValuePiece = Date | null;
 type Value = ValuePiece | [ValuePiece, ValuePiece];
-
-function getTrashAssignment(thursday: Date, maleTenants: string[]) {
-  const weekIdx = getWeekIndex(thursday);
-  const tenant = maleTenants.length > 0
-    ? maleTenants[((weekIdx % maleTenants.length) + maleTenants.length) % maleTenants.length]
-    : "—";
-  const hasRecycle = weekIdx % 2 === 0;
-  return { tenant, hasRecycle };
-}
-
-function getBathroomAssignment(thursday: Date, bathroomTenants: string[]) {
-  const weekIdx = getWeekIndex(thursday);
-  return bathroomTenants.length > 0
-    ? bathroomTenants[((Math.floor(weekIdx / 2) % bathroomTenants.length) + bathroomTenants.length) % bathroomTenants.length]
-    : "—";
-}
-
-function getDishesAssignment(sunday: Date, dishesTenants: string[]) {
-  const weekIdx = getDishesWeekIndex(sunday);
-  return dishesTenants.length > 0
-    ? dishesTenants[((weekIdx % dishesTenants.length) + dishesTenants.length) % dishesTenants.length]
-    : "—";
-}
-
-/** Returns the Thursday of the same ISO week as the given date (looking backward). */
-function getThursdayOfSameWeek(date: Date): Date {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const day = d.getDay(); // 0=Sun … 6=Sat
-  const diff = (day - 4 + 7) % 7; // days since last Thursday
-  d.setDate(d.getDate() - diff);
-  return d;
-}
-
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
 
 interface Birthday {
   name: string;
@@ -66,74 +30,29 @@ interface Props {
   dishesTenants?: string[];
 }
 
-type ReminderType = "trash" | "bathroom" | "dishes" | "rent";
-
-const AUTO_SETTING_KEY: Record<ReminderType, string> = {
-  trash: "autoTrashReminder",
-  bathroom: "autoBathroomReminder",
-  dishes: "autoDishesReminder",
-  rent: "autoRentReminder",
-};
-
 const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bathroomTenants = [], dishesTenants = [] }: Props) => {
   const today = new Date();
   const [selected, setSelected] = useState<Value>(today);
   const [activeStart, setActiveStart] = useState<Date>(
     new Date(today.getFullYear(), today.getMonth(), 1)
   );
-  const [reminding, setReminding] = useState<ReminderType | null>(null);
-  const [remindMsg, setRemindMsg] = useState<string | null>(null);
-  const [autoTrash, setAutoTrash] = useState(true);
-  const [autoBathroom, setAutoBathroom] = useState(true);
-  const [autoDishes, setAutoDishes] = useState(true);
-  const [autoRent, setAutoRent] = useState(true);
-  const [togglingAuto, setTogglingAuto] = useState<ReminderType | null>(null);
-  const [rentDueDay, setRentDueDay] = useState("1");
-  const [rentLeadDays, setRentLeadDays] = useState("3");
-  const [savingRentSetting, setSavingRentSetting] = useState(false);
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.autoTrashReminder !== undefined) setAutoTrash(data.autoTrashReminder === "true");
-        if (data.autoBathroomReminder !== undefined) setAutoBathroom(data.autoBathroomReminder === "true");
-        if (data.autoDishesReminder !== undefined) setAutoDishes(data.autoDishesReminder === "true");
-        if (data.autoRentReminder !== undefined) setAutoRent(data.autoRentReminder === "true");
-        if (data.rentDueDay !== undefined) setRentDueDay(data.rentDueDay);
-        if (data.rentReminderLeadDays !== undefined) setRentLeadDays(data.rentReminderLeadDays);
-      })
-      .catch(() => null);
-  }, [isAdmin]);
-
-  const handleToggleAuto = async (type: ReminderType) => {
-    const key = AUTO_SETTING_KEY[type];
-    const current = type === "trash" ? autoTrash : type === "bathroom" ? autoBathroom : type === "dishes" ? autoDishes : autoRent;
-    const newValue = !current;
-    setTogglingAuto(type);
-    await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value: String(newValue) }),
-    }).catch(() => null);
-    if (type === "trash") setAutoTrash(newValue);
-    else if (type === "bathroom") setAutoBathroom(newValue);
-    else if (type === "dishes") setAutoDishes(newValue);
-    else setAutoRent(newValue);
-    setTogglingAuto(null);
-  };
-
-  const handleSaveRentSetting = async (key: "rentDueDay" | "rentReminderLeadDays", value: string) => {
-    if (!/^\d+$/.test(value)) return;
-    setSavingRentSetting(true);
-    await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value }),
-    }).catch(() => null);
-    setSavingRentSetting(false);
-  };
+  const {
+    reminding,
+    remindMsg,
+    autoTrash,
+    autoBathroom,
+    autoDishes,
+    autoRent,
+    togglingAuto,
+    rentDueDay,
+    setRentDueDay,
+    rentLeadDays,
+    setRentLeadDays,
+    savingRentSetting,
+    handleToggleAuto,
+    handleSaveRentSetting,
+    handleRemind,
+  } = useReminderControls(isAdmin);
 
   const year = activeStart.getFullYear();
   const month = activeStart.getMonth();
@@ -177,31 +96,6 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], maleTenants = [], bath
   const currentBathroomTenant = getBathroomAssignment(currentThursday, bathroomTenants);
   const currentSunday = getSundayOfWeek(today);
   const currentDishesTenant = getDishesAssignment(currentSunday, dishesTenants);
-
-  const handleRemind = async (type: ReminderType) => {
-    setReminding(type);
-    setRemindMsg(null);
-    try {
-      const res = await fetch("/api/remind", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const notifiedText = Array.isArray(data.notified)
-          ? data.notified.length > 0 ? data.notified.join(", ") : "nobody (no one due yet)"
-          : data.notified;
-        setRemindMsg(`✓ Notified ${notifiedText}!`);
-      } else {
-        setRemindMsg(`Error: ${data.error}`);
-      }
-    } catch {
-      setRemindMsg("Failed to send reminder");
-    }
-    setReminding(null);
-    setTimeout(() => setRemindMsg(null), 4000);
-  };
 
   return (
     <div className="bg-white dark:bg-darkCard p-5 rounded-2xl border border-gray-300 dark:border-darkBorder shadow-[var(--shadow-card)]">

@@ -1,11 +1,14 @@
 import EventCalendar from "@/components/EventCalendar";
+import MobileEventCalendar from "@/components/mobile/MobileEventCalendar";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { getViewMode } from "@/lib/view-mode";
 import { getDishesDutyTenants } from "@/lib/dishes-duty";
 
 const CalendarPage = async () => {
   const currentUser = await getCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
+  const isMobile = (await getViewMode()) === "mobile";
 
   const [maleTenantRows, bathroomTenantRows, dishesDutyTenantRows] = await Promise.all([
     prisma.tenant.findMany({
@@ -20,6 +23,17 @@ const CalendarPage = async () => {
     }),
     getDishesDutyTenants(),
   ]);
+
+  if (isMobile) {
+    return (
+      <MobileEventCalendar
+        isAdmin={isAdmin}
+        maleTenants={maleTenantRows.map((t) => t.name)}
+        bathroomTenants={bathroomTenantRows.map((t) => t.name)}
+        dishesTenants={dishesDutyTenantRows.map((t) => t.name)}
+      />
+    );
+  }
 
   return (
     <div className="p-4 flex justify-center">

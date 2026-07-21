@@ -9,13 +9,15 @@ interface Props {
   userRole: string;
   avatarUrl: string | null;
   tenantInitial: string;
+  viewMode: "pc" | "mobile";
 }
 
-export default function NavbarUserMenu({ userName, userRole, avatarUrl, tenantInitial }: Props) {
+export default function NavbarUserMenu({ userName, userRole, avatarUrl, tenantInitial, viewMode }: Props) {
   const { signOut, openUserProfile } = useClerk();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(false);
+  const [switchingView, setSwitchingView] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,6 +38,18 @@ export default function NavbarUserMenu({ userName, userRole, avatarUrl, tenantIn
     // Let the fade-in finish, then sign out (redirect acts as the "fade out")
     await new Promise((r) => setTimeout(r, 600));
     await signOut({ redirectUrl: "/sign-in" });
+  };
+
+  const handleSwitchView = async () => {
+    setOpen(false);
+    setSwitchingView(true);
+    const nextMode = viewMode === "mobile" ? "pc" : "mobile";
+    await fetch("/api/view-mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: nextMode }),
+    }).catch(() => null);
+    window.location.reload();
   };
 
   return (
@@ -78,6 +92,15 @@ export default function NavbarUserMenu({ userName, userRole, avatarUrl, tenantIn
               className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-meadowMuted dark:hover:bg-darkSurface transition-colors"
             >
               Manage Account
+            </button>
+            <button
+              onClick={handleSwitchView}
+              disabled={switchingView}
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-meadowMuted dark:hover:bg-darkSurface transition-colors disabled:opacity-50"
+            >
+              {switchingView
+                ? "Switching…"
+                : viewMode === "mobile" ? "🖥️ Switch to PC view" : "📱 Switch to Mobile view"}
             </button>
             <button
               onClick={handleSignOut}

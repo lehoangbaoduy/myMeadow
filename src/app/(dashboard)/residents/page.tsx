@@ -1,15 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { getViewMode } from "@/lib/view-mode";
 import { redirect } from "next/navigation";
 import DashboardContent from "@/components/DashboardContent";
 import EventCalendar from "@/components/EventCalendar";
 import ResidentCount from "@/components/ResidentCount";
 import Annoucements from "@/components/Announcements";
+import MobileDashboardContent from "@/components/mobile/MobileDashboardContent";
+import MobileEventCalendar from "@/components/mobile/MobileEventCalendar";
+import MobileResidentCount from "@/components/mobile/MobileResidentCount";
 import { getDishesDutyTenants } from "@/lib/dishes-duty";
 
 const ResidentsPage = async () => {
   const currentUser = await getCurrentUser();
   if (!currentUser) redirect("/sign-in");
+  const isMobile = (await getViewMode()) === "mobile";
 
   const [bills, tenantDobs, maleTenantRows, bathroomTenantRows, dishesDutyTenantRows] = await Promise.all([
     prisma.utilityBill.findMany({ orderBy: [{ year: "asc" }, { month: "asc" }] }),
@@ -39,6 +44,23 @@ const ResidentsPage = async () => {
       month: new Date(t.dob).getUTCMonth() + 1,
       day: new Date(t.dob).getUTCDate(),
     }));
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-4">
+        <MobileDashboardContent isAdmin={false} bills={bills} />
+        <MobileEventCalendar
+          isAdmin={false}
+          birthdays={birthdays}
+          maleTenants={maleTenantRows.map((t) => t.name)}
+          bathroomTenants={bathroomTenantRows.map((t) => t.name)}
+          dishesTenants={dishesDutyTenantRows.map((t) => t.name)}
+        />
+        <MobileResidentCount />
+        <Annoucements />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 flex gap-4 flex-col md:flex-row">

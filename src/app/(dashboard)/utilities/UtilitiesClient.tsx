@@ -1,69 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface BillRow {
-  id: number; month: number; year: number;
-  electric: number; electricUsage: number | null; electricPrice: number | null;
-  gas: number; gasUsage: number | null; gasPrice: number | null;
-  water: number; waterUsage: number | null; waterPrice: number | null;
-  wifi: number; wifiPrice: number | null;
-}
-interface DocRow {
-  id: number; month: number; year: number; utilityType: string;
-  fileName: string; filePath: string;
-  billStartDate: string | null; billEndDate: string | null;
-}
-interface OcrResult {
-  billingMonth: number | null; billingYear: number | null;
-  billingPeriodStart: string | null; billingPeriodEnd: string | null;
-  totalAmount: number | null; usage: number | null; pricePerUnit: number | null;
-}
-interface ReviewForm {
-  month: number; year: number;
-  billStart: string; billEnd: string;
-  amount: string; usage: string; price: string;
-}
-interface TenantShareRow {
-  id: number;
-  name: string;
-  utilityShare: number;
-  isPlaceholder: boolean;
-}
-interface Props {
-  isAdmin: boolean;
-  bills: BillRow[];
-  documents: DocRow[];
-  tenantName: string | null;
-  tenantId: number | null;
-  tenants: TenantShareRow[];
-  currentMonth: number;
-  currentYear: number;
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const UTIL_COLORS = { electric: "#F59E0B", gas: "#EF4444", water: "#06B6D4", wifi: "#8B5CF6" };
-const UTIL_LABELS = { electric: "Electric", gas: "Gas", water: "Water", wifi: "WiFi" };
-const TODAY_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: TODAY_YEAR - 2024 + 1 }, (_, i) => 2024 + i);
-
-function getYearRange(year: number) {
-  return Array.from({ length: 12 }, (_, i) => ({ month: i + 1, year }));
-}
-
-function fmtLabel(month: number, year: number) {
-  return `${MONTHS[month - 1]} ${String(year).slice(2)}`;
-}
-
-function fmtDate(d: string | null | undefined): string {
-  if (!d) return "";
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
+import { useUtilitiesData } from "@/hooks/useUtilitiesData";
+import {
+  MONTHS, UTIL_LABELS, UTIL_UNITS, YEAR_OPTIONS, fmtLabel, fmtDate,
+  type UtilitiesProps, type UtilType,
+} from "@/lib/utilities";
 
 // ─── 3-dot menu ───────────────────────────────────────────────────────────────
 function ThreeDotMenu({ onEdit }: { onEdit: () => void }) {
@@ -111,255 +56,40 @@ const inputClass = "w-full px-3 py-2.5 rounded-lg border border-meadowBorder dar
 const labelClass = "block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide";
 const selectClass = "px-2 py-1.5 rounded-md border border-meadowBorder dark:border-darkBorder bg-white dark:bg-darkSurface text-gray-700 dark:text-gray-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-meadowOrange/40 cursor-pointer";
 
-type UtilType = "electric" | "gas" | "water" | "wifi";
-
-export default function UtilitiesClient({ isAdmin, bills, documents, tenantName, tenantId, tenants, currentMonth, currentYear }: Props) {
-  const [utilType, setUtilType] = useState<UtilType>("electric");
-  const [allBills, setAllBills] = useState(bills);
-  const [allDocs, setAllDocs] = useState(documents);
-  const [allTenants, setAllTenants] = useState(tenants);
-  const [shareDraft, setShareDraft] = useState<Record<number, string>>({});
-  const [savingShareId, setSavingShareId] = useState<number | null>(null);
-
-  // Chart year filter (Billing History + Usage History)
-  const [chartYear, setChartYear] = useState(currentYear);
-
-  // Bill split + document viewer month/year selector
-  const [splitMonth, setSplitMonth] = useState(currentMonth);
-  const [splitYear, setSplitYear] = useState(currentYear);
-
-  // Edit modals
-  const [editBillingModal, setEditBillingModal] = useState(false);
-  const [editUsageModal, setEditUsageModal] = useState(false);
-  const [editForm, setEditForm] = useState({ amount: "", usage: "", price: "" });
-  const [saving, setSaving] = useState(false);
-  const [savingError, setSavingError] = useState<string | null>(null);
-
-  // Upload modal
-  const [uploadModal, setUploadModal] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [selectedDocMonth, setSelectedDocMonth] = useState(currentMonth);
-  const [selectedDocYear, setSelectedDocYear] = useState(currentYear);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
-  // OCR + Review modal
-  const [ocrLoading, setOcrLoading] = useState(false);
-  const [reviewModal, setReviewModal] = useState(false);
-  const [reviewError, setReviewError] = useState<string | null>(null);
-  const [reviewSaving, setReviewSaving] = useState(false);
-  const [pendingDocId, setPendingDocId] = useState<number | null>(null);
-  const [reviewForm, setReviewForm] = useState<ReviewForm>({
-    month: currentMonth, year: currentYear,
-    billStart: "", billEnd: "",
-    amount: "", usage: "", price: "",
-  });
-
-  // Memos
-  const billMap = useMemo(() => {
-    const m = new Map<string, BillRow>();
-    allBills.forEach((b) => m.set(`${b.month}-${b.year}`, b));
-    return m;
-  }, [allBills]);
-
-  const latestBill = allBills.length > 0 ? allBills[allBills.length - 1] : null;
-
-  // Chart range: Jan–Dec of selected chart year
-  const chartRange = useMemo(() => getYearRange(chartYear), [chartYear]);
-
-  // Bill selected for split/document view
-  const splitBill = billMap.get(`${splitMonth}-${splitYear}`) ?? null;
-  const splitBillAmount = splitBill ? ((splitBill[utilType as keyof BillRow] as number) ?? 0) : 0;
-  const totalShares = allTenants.reduce((sum, t) => sum + t.utilityShare, 0);
-  const myShare = allTenants.find((t) => t.id === tenantId)?.utilityShare ?? 1;
-  const myBill = totalShares > 0 ? (splitBillAmount * myShare) / totalShares : 0;
-
-  const handleShareSave = async (tenant: TenantShareRow, rawValue: string) => {
-    const value = Number(rawValue);
-    if (!Number.isFinite(value) || value < 0) return;
-    setSavingShareId(tenant.id);
-    const res = await fetch(`/api/tenants/${tenant.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ utilityShare: value }),
-    });
-    if (res.ok) {
-      setAllTenants((prev) => prev.map((t) => (t.id === tenant.id ? { ...t, utilityShare: value } : t)));
-    }
-    setSavingShareId(null);
-  };
-
-  // Document for selected split month/year/utilType
-  const splitDoc = allDocs.find(
-    (d) => d.utilityType === utilType && d.month === splitMonth && d.year === splitYear
-  ) ?? null;
-
-  // Chart data — full year, 0 for missing months
-  const billingData = chartRange.map(({ month, year }) => {
-    const bill = billMap.get(`${month}-${year}`);
-    return { name: MONTHS[month - 1], Amount: bill ? Number(bill[utilType as keyof BillRow] ?? 0) : 0 };
-  });
-
-  const usageData = chartRange.map(({ month, year }) => {
-    const bill = billMap.get(`${month}-${year}`);
-    const usageKey = `${utilType}Usage` as keyof BillRow;
-    return { name: MONTHS[month - 1], Usage: bill ? Number((bill[usageKey] as number | null) ?? 0) : 0 };
-  });
-
-  const hasChartBills = allBills.some((b) => b.year === chartYear);
-
-  const refreshBills = async () => {
-    const res = await fetch("/api/utilities");
-    if (res.ok) setAllBills(await res.json());
-  };
-
-  const refreshDocs = async () => {
-    const res = await fetch("/api/utilities/documents");
-    if (res.ok) setAllDocs(await res.json());
-  };
-
-  const openEditBilling = () => {
-    if (!latestBill) return;
-    setEditForm({ amount: String((latestBill[utilType as keyof BillRow] as number) ?? 0), usage: "", price: "" });
-    setSavingError(null);
-    setEditBillingModal(true);
-  };
-
-  const openEditUsage = () => {
-    if (!latestBill) return;
-    const usageKey = `${utilType}Usage` as keyof BillRow;
-    const priceKey = `${utilType}Price` as keyof BillRow;
-    setEditForm({
-      amount: "",
-      usage: String((latestBill[usageKey] as number | null) ?? ""),
-      price: String((latestBill[priceKey] as number | null) ?? ""),
-    });
-    setSavingError(null);
-    setEditUsageModal(true);
-  };
-
-  const handleSaveBilling = async () => {
-    if (!latestBill) return;
-    setSaving(true); setSavingError(null);
-    const res = await fetch(`/api/utilities/${latestBill.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [utilType]: Number(editForm.amount) }),
-    });
-    setSaving(false);
-    if (res.ok) { setEditBillingModal(false); await refreshBills(); }
-    else { const d = await res.json(); setSavingError(d.error ?? "Failed"); }
-  };
-
-  const handleSaveUsage = async () => {
-    if (!latestBill) return;
-    setSaving(true); setSavingError(null);
-    const body: Record<string, number | null> = {};
-    if (utilType !== "wifi") body[`${utilType}Usage`] = editForm.usage ? Number(editForm.usage) : null;
-    body[`${utilType}Price`] = editForm.price ? Number(editForm.price) : null;
-    const res = await fetch(`/api/utilities/${latestBill.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setSaving(false);
-    if (res.ok) { setEditUsageModal(false); await refreshBills(); }
-    else { const d = await res.json(); setSavingError(d.error ?? "Failed"); }
-  };
-
-  // ─── Upload & OCR ──────────────────────────────────────────────────────────
-  const handleUpload = async () => {
-    if (!uploadFile) return;
-    setUploading(true); setUploadError(null);
-
-    const fd = new FormData();
-    fd.append("file", uploadFile);
-    fd.append("month", String(selectedDocMonth));
-    fd.append("year", String(selectedDocYear));
-    fd.append("utilityType", utilType);
-    const uploadRes = await fetch("/api/utilities/documents", { method: "POST", body: fd });
-    if (!uploadRes.ok) {
-      const d = await uploadRes.json();
-      setUploadError(d.error ?? "Upload failed");
-      setUploading(false);
-      return;
-    }
-    const uploadedDoc = await uploadRes.json();
-    setPendingDocId(uploadedDoc.id);
-    await refreshDocs();
-
-    setOcrLoading(true);
-    const ocrFd = new FormData();
-    ocrFd.append("file", uploadFile);
-    ocrFd.append("utilityType", utilType);
-    const ocrRes = await fetch("/api/utilities/ocr", { method: "POST", body: ocrFd });
-    const ocrData: OcrResult | { error: string } = await ocrRes.json();
-    setOcrLoading(false);
-    setUploading(false);
-
-    if ("error" in ocrData) {
-      setReviewForm({ month: selectedDocMonth, year: selectedDocYear, billStart: "", billEnd: "", amount: "", usage: "", price: "" });
-    } else {
-      setReviewForm({
-        month: ocrData.billingMonth ?? selectedDocMonth,
-        year: ocrData.billingYear ?? selectedDocYear,
-        billStart: ocrData.billingPeriodStart ?? "",
-        billEnd: ocrData.billingPeriodEnd ?? "",
-        amount: ocrData.totalAmount != null ? String(ocrData.totalAmount) : "",
-        usage: ocrData.usage != null ? String(ocrData.usage) : "",
-        price: ocrData.pricePerUnit != null ? String(ocrData.pricePerUnit) : "",
-      });
-    }
-
-    setUploadModal(false);
-    setUploadFile(null);
-    setReviewError(null);
-    setReviewModal(true);
-  };
-
-  const handleConfirmReview = async () => {
-    setReviewSaving(true); setReviewError(null);
-
-    const billBody: Record<string, unknown> = {
-      month: reviewForm.month, year: reviewForm.year,
-      [utilType]: reviewForm.amount ? Number(reviewForm.amount) : 0,
-    };
-    if (utilType !== "wifi" && reviewForm.usage) billBody[`${utilType}Usage`] = Number(reviewForm.usage);
-    if (reviewForm.price) billBody[`${utilType}Price`] = Number(reviewForm.price);
-
-    const billRes = await fetch("/api/utilities", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(billBody),
-    });
-    if (!billRes.ok) {
-      const d = await billRes.json();
-      setReviewError(d.error ?? "Failed to save bill");
-      setReviewSaving(false);
-      return;
-    }
-
-    if (pendingDocId) {
-      await fetch(`/api/utilities/documents/${pendingDocId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ billStartDate: reviewForm.billStart || null, billEndDate: reviewForm.billEnd || null }),
-      });
-    }
-
-    // After saving, jump the split view to the newly saved month/year
-    setSplitMonth(reviewForm.month);
-    setSplitYear(reviewForm.year);
-
-    await refreshBills();
-    await refreshDocs();
-    setReviewSaving(false);
-    setReviewModal(false);
-    setPendingDocId(null);
-  };
-
-  const color = UTIL_COLORS[utilType];
-  const UTIL_UNITS: Record<UtilType, string> = { electric: "kWh", gas: "m³", water: "m³", wifi: "month" };
+export default function UtilitiesClient(props: UtilitiesProps) {
+  const { isAdmin, currentMonth, currentYear } = props;
+  const {
+    utilType, setUtilType,
+    allTenants,
+    shareDraft, setShareDraft,
+    savingShareId,
+    chartYear, setChartYear,
+    splitMonth, setSplitMonth,
+    splitYear, setSplitYear,
+    editBillingModal, setEditBillingModal,
+    editUsageModal, setEditUsageModal,
+    editForm, setEditForm,
+    saving, savingError,
+    uploadModal, setUploadModal,
+    uploadFile, setUploadFile,
+    selectedDocMonth, setSelectedDocMonth,
+    selectedDocYear, setSelectedDocYear,
+    uploading, uploadError, setUploadError,
+    ocrLoading,
+    reviewModal, setReviewModal,
+    reviewError, reviewSaving,
+    reviewForm, setReviewForm,
+    latestBill,
+    splitBill, splitBillAmount, totalShares, myShare, myBill,
+    splitDoc,
+    billingData, usageData, hasChartBills,
+    handleShareSave,
+    openEditBilling, openEditUsage,
+    handleSaveBilling, handleSaveUsage,
+    handleUpload, handleConfirmReview,
+    color,
+  } = useUtilitiesData(props);
+  const { tenantId } = props;
 
   return (
     <div className="p-6 flex flex-col gap-6">

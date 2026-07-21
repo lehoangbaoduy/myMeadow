@@ -1,157 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-interface InventoryItem {
-  id: number;
-  name: string;
-  category: string;
-  icon: string | null;
-  level: number;
-  isCustom: boolean;
-}
-
-interface RunOutEntry {
-  id: number;
-  itemName: string;
-  reportedAt: string;
-}
-
-function LevelBar({ level, onChange }: { level: number; onChange: (v: number) => void }) {
-  const barRef = useRef<HTMLDivElement>(null);
-  const pct = Math.round(level * 100);
-  const fillColor = level > 0.5 ? "#22c55e" : level > 0.2 ? "#fb923c" : "#ef4444";
-
-  const computeLevel = (clientX: number) => {
-    if (!barRef.current) return;
-    const rect = barRef.current.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    onChange(Math.round(ratio * 100) / 100);
-  };
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    computeLevel(e.clientX);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.buttons === 1) computeLevel(e.clientX);
-  };
-
-  return (
-    <div
-      ref={barRef}
-      className="relative w-full h-5 bg-gray-200 dark:bg-darkBorder rounded-full cursor-ew-resize select-none"
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-    >
-      <div
-        className="h-full rounded-full transition-all duration-75"
-        style={{ width: `${pct}%`, backgroundColor: fillColor }}
-      />
-      {/* Label */}
-      <span
-        className="absolute inset-0 flex items-center justify-center text-[10px] font-bold pointer-events-none"
-        style={{ color: pct > 20 ? "white" : "#374151", textShadow: pct > 20 ? "0 0 3px rgba(0,0,0,0.35)" : "none" }}
-      >
-        {pct}%
-      </span>
-    </div>
-  );
-}
-
-const CATEGORY_ORDER = ["Cooking", "Household", "Cleaning", "Laundry", "Custom"];
+import { useKitchenInventory } from "@/hooks/useKitchenInventory";
+import { CATEGORY_ORDER, CATEGORY_ICONS } from "@/lib/inventory";
+import LevelBar from "@/components/inventory/LevelBar";
 
 export default function KitchenInventoryClient() {
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [runOutList, setRunOutList] = useState<RunOutEntry[]>([]);
-  const [showRunOut, setShowRunOut] = useState(false);
-  const [showAddItem, setShowAddItem] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [savingId, setSavingId] = useState<number | null>(null);
-  const [buzzingId, setBuzzingId] = useState<number | null>(null);
-  const [resolvingId, setResolvingId] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetch("/api/inventory")
-      .then((r) => r.json())
-      .then(setItems)
-      .finally(() => setLoading(false));
-  }, []);
-
-  const fetchRunOut = async () => {
-    const res = await fetch("/api/inventory/runout");
-    const data = await res.json();
-    setRunOutList(data);
-  };
-
-  const handleLevelChange = async (item: InventoryItem, newLevel: number) => {
-    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, level: newLevel } : i)));
-    setSavingId(item.id);
-    await fetch(`/api/inventory/${item.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ level: newLevel }),
-    });
-    setSavingId(null);
-  };
-
-  const handleBuzz = async (item: InventoryItem) => {
-    setBuzzingId(item.id);
-    // Auto-set level to 0
-    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, level: 0 } : i)));
-    await fetch(`/api/inventory/${item.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ level: 0 }),
-    });
-    await fetch("/api/inventory/runout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemName: item.name }),
-    });
-    setBuzzingId(null);
-  };
-
-  const handleAddItem = async () => {
-    if (!newName.trim()) return;
-    const res = await fetch("/api/inventory", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim() }),
-    });
-    if (res.ok) {
-      const newItem = await res.json();
-      setItems((prev) => [...prev, newItem]);
-      setNewName("");
-      setShowAddItem(false);
-    }
-  };
-
-  const handleResolve = async (id: number) => {
-    setResolvingId(id);
-    await fetch("/api/inventory/runout", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setRunOutList((prev) => prev.filter((r) => r.id !== id));
-    setResolvingId(null);
-  };
-
-  const grouped = CATEGORY_ORDER.reduce<Record<string, InventoryItem[]>>((acc, cat) => {
-    acc[cat] = items.filter((i) => i.category === cat);
-    return acc;
-  }, {});
-
-  const categoryIcons: Record<string, string> = {
-    Cooking: "🍳",
-    Household: "🏠",
-    Cleaning: "✨",
-    Laundry: "🫧",
-    Custom: "📦",
-  };
+  const {
+    loading,
+    runOutList,
+    showRunOut,
+    setShowRunOut,
+    showAddItem,
+    setShowAddItem,
+    newName,
+    setNewName,
+    savingId,
+    buzzingId,
+    resolvingId,
+    fetchRunOut,
+    handleLevelChange,
+    handleBuzz,
+    handleAddItem,
+    handleResolve,
+    grouped,
+  } = useKitchenInventory();
 
   if (loading) {
     return <div className="p-6 text-center text-gray-400">Loading inventory…</div>;
@@ -192,7 +64,7 @@ export default function KitchenInventoryClient() {
         return (
           <div key={cat} className="mb-8">
             <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-              <span>{categoryIcons[cat]}</span> {cat}
+              <span>{CATEGORY_ICONS[cat]}</span> {cat}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {catItems.map((item) => (

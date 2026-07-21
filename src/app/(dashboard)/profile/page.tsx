@@ -3,8 +3,10 @@ import { currentUser as getClerkUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import type { MaintenanceRequest } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { getViewMode } from "@/lib/view-mode";
 import TenantProfileForm from "@/components/TenantProfileForm";
 import ProfileRequestButtons from "@/components/ProfileRequestButtons";
+import MobileProfileClient from "@/components/mobile/MobileProfileClient";
 
 export default async function ProfilePage() {
   const [currentUser, clerkUser] = await Promise.all([getCurrentUser(), getClerkUser()]);
@@ -31,6 +33,34 @@ export default async function ProfilePage() {
     where: { tenantId: tenant.id, status: "PENDING" },
     orderBy: { createdAt: "desc" },
   });
+
+  const isMobile = (await getViewMode()) === "mobile";
+
+  if (isMobile) {
+    return (
+      <MobileProfileClient
+        tenant={{
+          id: tenant.id,
+          name: tenant.name,
+          nickname: tenant.nickname,
+          dob: tenant.dob ? new Date(tenant.dob).toISOString().split("T")[0] : "",
+          gender: tenant.gender,
+          roomNumber: tenant.roomNumber,
+          phone: tenant.phone,
+          email: tenant.email,
+          notes: tenant.notes,
+          avatarUrl: tenant.avatarData ? `/api/tenants/${tenant.id}/avatar` : null,
+        }}
+        pendingRequests={pendingRequests.map((r: MaintenanceRequest) => ({
+          id: r.id,
+          requestType: r.requestType,
+          description: r.description,
+          status: r.status,
+          createdAt: r.createdAt.toISOString(),
+        }))}
+      />
+    );
+  }
 
   return (
     <div className="p-6">
