@@ -24,8 +24,8 @@ export function getBathroomAssignment(thursday: Date, bathroomTenants: string[])
     : "—";
 }
 
-export function getDishesAssignment(sunday: Date, dishesTenants: string[]) {
-  const weekIdx = getDishesWeekIndex(sunday);
+export function getDishesAssignment(friday: Date, dishesTenants: string[]) {
+  const weekIdx = getDishesWeekIndex(friday);
   return dishesTenants.length > 0
     ? dishesTenants[((weekIdx % dishesTenants.length) + dishesTenants.length) % dishesTenants.length]
     : "—";

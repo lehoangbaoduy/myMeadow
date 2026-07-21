@@ -4,38 +4,40 @@ export interface DishesEvent {
   isOverride: boolean;
 }
 
-// Anchor: first Sunday on or after Jan 1 2025 = Jan 5 2025
-const BASE_SUNDAY = new Date(2025, 0, 5);
+// Anchor: Jan 3 2025 (Friday) — 2 days before the previous Sunday anchor (Jan 5 2025),
+// so week indices line up exactly with the old Sunday-based schedule and nobody's
+// turn shifts when the rotation day moves from Sunday to Friday.
+const BASE_FRIDAY = new Date(2025, 0, 3);
 
-export function getWeekIndex(sunday: Date): number {
+export function getWeekIndex(friday: Date): number {
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-  return Math.round((sunday.getTime() - BASE_SUNDAY.getTime()) / msPerWeek);
+  return Math.round((friday.getTime() - BASE_FRIDAY.getTime()) / msPerWeek);
 }
 
-export function getSundayOfWeek(date: Date): Date {
+export function getFridayOfWeek(date: Date): Date {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const daysUntilSunday = (7 - d.getDay()) % 7;
-  d.setDate(d.getDate() + daysUntilSunday);
+  const daysUntilFriday = (5 - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + daysUntilFriday);
   return d;
 }
 
-export function getSundaysInMonth(year: number, month: number): Date[] {
-  const sundays: Date[] = [];
+export function getFridaysInMonth(year: number, month: number): Date[] {
+  const fridays: Date[] = [];
   const d = new Date(year, month, 1);
-  d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
+  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7));
   while (d.getMonth() === month) {
-    sundays.push(new Date(d));
+    fridays.push(new Date(d));
     d.setDate(d.getDate() + 7);
   }
-  return sundays;
+  return fridays;
 }
 
 export function generateSchedule(
-  sundays: Date[],
+  fridays: Date[],
   activeTenants: string[]
 ): DishesEvent[] {
   if (activeTenants.length === 0) return [];
-  return sundays.map((date) => {
+  return fridays.map((date) => {
     const weekIdx = getWeekIndex(date);
     const tenantName =
       activeTenants[

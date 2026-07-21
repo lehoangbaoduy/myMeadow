@@ -18,7 +18,7 @@ export const CATEGORY_ORDER = ["Cooking", "Household", "Cleaning", "Laundry", "C
 export const CATEGORY_ICONS: Record<string, string> = {
   Cooking: "🍳",
   Household: "🏠",
-  Cleaning: "✨",
+  Cleaning: "🛁",
   Laundry: "🫧",
   Custom: "📦",
 };

@@ -1,0 +1,143 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - img "MyMeadow" [ref=e5]
+        - generic [ref=e6]: MyMeadow
+      - generic [ref=e7]:
+        - button "Toggle theme" [ref=e8] [cursor=pointer]:
+          - img [ref=e9]
+        - button "Notifications" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+        - button "B" [ref=e17] [cursor=pointer]
+    - main [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - generic [ref=e21]:
+            - generic [ref=e23]: 🚮 Trash
+            - generic [ref=e24]:
+              - button "Auto reminder on" [ref=e25] [cursor=pointer]
+              - button "Send now" [ref=e28] [cursor=pointer]
+          - generic [ref=e29]:
+            - generic [ref=e31]: 🛁 Bathroom
+            - generic [ref=e32]:
+              - button "Auto reminder on" [ref=e33] [cursor=pointer]
+              - button "Send now" [ref=e36] [cursor=pointer]
+          - generic [ref=e37]:
+            - generic [ref=e39]: 🍽️ Dishes
+            - generic [ref=e40]:
+              - button "Auto reminder on" [ref=e41] [cursor=pointer]
+              - button "Send now" [ref=e44] [cursor=pointer]
+          - generic [ref=e45]:
+            - generic [ref=e47]: 🏠 Rent
+            - generic [ref=e48]:
+              - button "Auto reminder on" [ref=e49] [cursor=pointer]
+              - button "Send now" [ref=e52] [cursor=pointer]
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - text: Rent due day
+              - spinbutton "Rent due day" [ref=e55]: "1"
+            - generic [ref=e56]:
+              - text: Remind days before
+              - spinbutton "Remind days before" [ref=e57]: "3"
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - button "«" [ref=e61] [cursor=pointer]
+            - button "‹" [ref=e62] [cursor=pointer]
+            - button "July 2026" [ref=e63] [cursor=pointer]
+            - button "›" [ref=e64] [cursor=pointer]
+            - button "»" [ref=e65] [cursor=pointer]
+          - generic [ref=e69]:
+            - generic [ref=e70]:
+              - generic [ref=e71]: Mon
+              - generic [ref=e72]: Tue
+              - generic [ref=e73]: Wed
+              - generic [ref=e74]: Thu
+              - generic [ref=e75]: Fri
+              - generic [ref=e76]: Sat
+              - generic [ref=e77]: Sun
+            - generic [ref=e78]:
+              - button "June 29, 2026" [ref=e79] [cursor=pointer]: "29"
+              - button "June 30, 2026" [ref=e80] [cursor=pointer]: "30"
+              - button "July 1, 2026" [ref=e81] [cursor=pointer]: "1"
+              - button "July 2, 2026 🚮 Bảo" [ref=e82] [cursor=pointer]:
+                - text: "2"
+                - generic [ref=e84]: 🚮 Bảo
+              - button "July 3, 2026 🍽️ Thảo" [ref=e85] [cursor=pointer]:
+                - text: "3"
+                - generic [ref=e87]: 🍽️ Thảo
+              - button "July 4, 2026 🛁 Khoa" [ref=e88] [cursor=pointer]:
+                - text: "4"
+                - generic [ref=e90]: 🛁 Khoa
+              - button "July 5, 2026" [ref=e91] [cursor=pointer]: "5"
+              - button "July 6, 2026" [ref=e92] [cursor=pointer]: "6"
+              - button "July 7, 2026" [ref=e93] [cursor=pointer]: "7"
+              - button "July 8, 2026" [ref=e94] [cursor=pointer]: "8"
+              - button "July 9, 2026 🚮 Khoa" [ref=e95] [cursor=pointer]:
+                - text: "9"
+                - generic [ref=e97]: 🚮 Khoa
+              - button "July 10, 2026 🍽️ Ngân" [ref=e98] [cursor=pointer]:
+                - text: "10"
+                - generic [ref=e100]: 🍽️ Ngân
+              - button "July 11, 2026 🛁 Khoa" [ref=e101] [cursor=pointer]:
+                - text: "11"
+                - generic [ref=e103]: 🛁 Khoa
+              - button "July 12, 2026" [ref=e104] [cursor=pointer]: "12"
+              - button "July 13, 2026" [ref=e105] [cursor=pointer]: "13"
+              - button "July 14, 2026" [ref=e106] [cursor=pointer]: "14"
+              - button "July 15, 2026" [ref=e107] [cursor=pointer]: "15"
+              - button "July 16, 2026 🚮 Bảo" [ref=e108] [cursor=pointer]:
+                - text: "16"
+                - generic [ref=e110]: 🚮 Bảo
+              - button "July 17, 2026 🍽️ Bảo" [ref=e111] [cursor=pointer]:
+                - text: "17"
+                - generic [ref=e113]: 🍽️ Bảo
+              - button "July 18, 2026 🛁 Bảo" [ref=e114] [cursor=pointer]:
+                - text: "18"
+                - generic [ref=e116]: 🛁 Bảo
+              - button "July 19, 2026" [ref=e117] [cursor=pointer]: "19"
+              - button "July 20, 2026" [ref=e118] [cursor=pointer]: "20"
+              - button "July 21, 2026" [ref=e119] [cursor=pointer]: "21"
+              - button "July 22, 2026" [ref=e120] [cursor=pointer]: "22"
+              - button "July 23, 2026 🚮 Khoa" [ref=e121] [cursor=pointer]:
+                - text: "23"
+                - generic [ref=e123]: 🚮 Khoa
+              - button "July 24, 2026 🍽️ Khoa" [ref=e124] [cursor=pointer]:
+                - text: "24"
+                - generic [ref=e126]: 🍽️ Khoa
+              - button "July 25, 2026 🛁 Bảo" [ref=e127] [cursor=pointer]:
+                - text: "25"
+                - generic [ref=e129]: 🛁 Bảo
+              - button "July 26, 2026" [ref=e130] [cursor=pointer]: "26"
+              - button "July 27, 2026" [ref=e131] [cursor=pointer]: "27"
+              - button "July 28, 2026" [ref=e132] [cursor=pointer]: "28"
+              - button "July 29, 2026" [ref=e133] [cursor=pointer]: "29"
+              - button "July 30, 2026 🚮 Bảo" [ref=e134] [cursor=pointer]:
+                - text: "30"
+                - generic [ref=e136]: 🚮 Bảo
+              - button "July 31, 2026 🍽️ Thảo" [ref=e137] [cursor=pointer]:
+                - text: "31"
+                - generic [ref=e139]: 🍽️ Thảo
+              - button "August 1, 2026 🛁 Khoa" [ref=e140] [cursor=pointer]:
+                - text: "1"
+                - generic [ref=e142]: 🛁 Khoa
+              - button "August 2, 2026" [ref=e143] [cursor=pointer]: "2"
+    - navigation [ref=e144]:
+      - link "Home" [ref=e145] [cursor=pointer]:
+        - /url: /admin
+        - text: Home
+      - link "Calendar" [ref=e147] [cursor=pointer]:
+        - /url: /calendar
+        - img [ref=e149]
+        - text: Calendar
+      - link "Utilities" [ref=e151] [cursor=pointer]:
+        - /url: /utilities
+        - text: Utilities
+      - link "Inventory" [ref=e153] [cursor=pointer]:
+        - /url: /kitchen-inventory
+        - img [ref=e155]
+        - text: Inventory
+      - button "More" [ref=e158] [cursor=pointer]:
+        - img [ref=e159]
+        - text: More
+  - alert [ref=e163]

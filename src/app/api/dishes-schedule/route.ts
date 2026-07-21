@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getDishesDutyTenants } from "@/lib/duty-tenants";
 import {
-  getSundaysInMonth,
+  getFridaysInMonth,
   generateSchedule,
   mergeWithOverrides,
 } from "@/lib/dishes-schedule";
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const year = Number(searchParams.get("year") ?? new Date().getFullYear());
   const month = Number(searchParams.get("month") ?? new Date().getMonth() + 1) - 1; // convert to 0-indexed
 
-  const sundays = getSundaysInMonth(year, month);
+  const fridays = getFridaysInMonth(year, month);
 
   const dutyTenants = await getDishesDutyTenants();
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   });
 
   const generated = generateSchedule(
-    sundays,
+    fridays,
     dutyTenants.map((t) => t.name)
   );
 
@@ -58,7 +58,7 @@ const putSchema = z.object({
   tenantId: z.number().int().positive(),
 });
 
-// PUT /api/dishes-schedule — admin override a single Sunday
+// PUT /api/dishes-schedule — admin override a single Friday
 export async function PUT(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -83,8 +83,8 @@ export async function PUT(req: NextRequest) {
   const { date, tenantId } = parsed.data;
 
   const parsedDate = new Date(date);
-  if (parsedDate.getDay() !== 0) {
-    return NextResponse.json({ error: "Date must be a Sunday" }, { status: 400 });
+  if (parsedDate.getDay() !== 5) {
+    return NextResponse.json({ error: "Date must be a Friday" }, { status: 400 });
   }
 
   const assignment = await prisma.dishesAssignment.upsert({

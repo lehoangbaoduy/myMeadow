@@ -53,22 +53,22 @@
               - /url: /kitchen-inventory
           - generic [ref=e77]:
             - generic [ref=e78]:
-              - heading "🗑️ Trash — This Week" [level=2] [ref=e79]
+              - heading "🚮 Trash — This Week" [level=2] [ref=e79]
               - generic [ref=e80]: Jul 23
             - paragraph [ref=e81]: Bảo
-            - generic [ref=e82]: 🗑️ Garbage only
+            - generic [ref=e82]: 🚮 Garbage only
           - generic [ref=e83]:
-            - heading "✨ Bathroom — This Week" [level=2] [ref=e85]
+            - heading "🛁 Bathroom — This Week" [level=2] [ref=e85]
             - paragraph [ref=e86]: Bảo
         - generic [ref=e87]:
           - generic [ref=e88]:
             - generic [ref=e89]:
-              - generic [ref=e91]: 🗑️ Trash
+              - generic [ref=e91]: 🚮 Trash
               - generic [ref=e92]:
                 - button "Auto reminder off" [ref=e93] [cursor=pointer]
                 - button "Send now" [ref=e96] [cursor=pointer]
             - generic [ref=e97]:
-              - generic [ref=e99]: ✨ Bathroom
+              - generic [ref=e99]: 🛁 Bathroom
               - generic [ref=e100]:
                 - button "Auto reminder off" [ref=e101] [cursor=pointer]
                 - button "Send now" [ref=e104] [cursor=pointer]

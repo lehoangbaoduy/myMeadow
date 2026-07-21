@@ -89,7 +89,7 @@ export default function MobileDashboardContent({ bills, trashTenants, bathroomTe
       {/* Card 3 — Trash schedule, this week */}
       <MobileCard>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🗑️ Trash — This Week</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🚮 Trash — This Week</h2>
           <span className="text-[11px] text-gray-400">{thursdayLabel}</span>
         </div>
         <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{trashAssignment.tenant}</p>
@@ -98,14 +98,14 @@ export default function MobileDashboardContent({ bills, trashTenants, bathroomTe
             ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
             : "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400"
         }`}>
-          {trashAssignment.hasRecycle ? "🗑️ Garbage + ♻️ Recycle" : "🗑️ Garbage only"}
+          {trashAssignment.hasRecycle ? "🚮 Garbage + ♻️ Recycle" : "🚮 Garbage only"}
         </span>
       </MobileCard>
 
       {/* Card 4 — Bathroom schedule, this week */}
       <MobileCard>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">✨ Bathroom — This Week</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🛁 Bathroom — This Week</h2>
         </div>
         <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{bathroomAssignee}</p>
       </MobileCard>

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getWeekIndex, getThursdayOfWeek } from "@/lib/trash-schedule";
-import { getWeekIndex as getDishesWeekIndex, getSundayOfWeek } from "@/lib/dishes-schedule";
+import { getWeekIndex as getDishesWeekIndex, getFridayOfWeek } from "@/lib/dishes-schedule";
 import { getTrashDutyTenants, getBathroomDutyTenants, getDishesDutyTenants } from "@/lib/duty-tenants";
 import { Resend } from "resend";
 
@@ -87,23 +87,23 @@ export async function sendReminder(type: "trash" | "bathroom" | "dishes"): Promi
     if (trashTenants.length === 0) throw new Error("No tenants with trash duty found");
     tenant = pickByWeekIndex(trashTenants, weekIdx);
     const dateStr = thursday.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-    content = `Hey ${tenant.name}! 👋 Just a friendly reminder — it's your turn to take out the trash this Thursday (${dateStr}). Please bring the bins to the curb by 7 PM. Thank you for keeping our home clean! 🗑️`;
-    subject = `🗑️ Trash Reminder — ${dateStr}`;
+    content = `Hey ${tenant.name}! 👋 Just a friendly reminder — it's your turn to take out the trash this Thursday (${dateStr}). Please bring the bins to the curb by 7 PM. Thank you for keeping our home clean! �`;
+    subject = `� Trash Reminder — ${dateStr}`;
   } else if (type === "bathroom") {
     const thursday = getThursdayOfWeek(today);
     const weekIdx = getWeekIndex(thursday);
     const bathroomTenants = await getBathroomDutyTenants();
     if (bathroomTenants.length === 0) throw new Error("No tenants with bathroom duty found");
     tenant = pickByWeekIndex(bathroomTenants, Math.floor(weekIdx / 2));
-    content = `Hey ${tenant.name}! ✨ This is your 2-week bathroom cleaning rotation. Please give the bathroom a thorough scrub (toilet, sink, mirror, floor) before Sunday. Your effort keeps our home fresh — thank you! ✨`;
-    subject = `✨ Bathroom Cleaning Reminder`;
+    content = `Hey ${tenant.name}! 🛁 This is your 2-week bathroom cleaning rotation. Please give the bathroom a thorough scrub (toilet, sink, mirror, floor) before Sunday. Your effort keeps our home fresh — thank you! 🛁`;
+    subject = `🛁 Bathroom Cleaning Reminder`;
   } else {
-    const sunday = getSundayOfWeek(today);
-    const weekIdx = getDishesWeekIndex(sunday);
+    const friday = getFridayOfWeek(today);
+    const weekIdx = getDishesWeekIndex(friday);
     const dishesDutyTenants = await getDishesDutyTenants();
     if (dishesDutyTenants.length === 0) throw new Error("No residents on dish duty");
     tenant = pickByWeekIndex(dishesDutyTenants, weekIdx);
-    const dateStr = sunday.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    const dateStr = friday.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
     content = `Hey ${tenant.name}! 🍽️ Just a friendly reminder — it's your turn on dish duty this week (${dateStr}). Please keep the sink and drying rack clear. Thank you for keeping our kitchen tidy! 🍽️`;
     subject = `🍽️ Dish Duty Reminder — ${dateStr}`;
   }

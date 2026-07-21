@@ -33,8 +33,8 @@ interface Props {
 }
 
 const REMINDER_CARDS: { type: ReminderType; label: string; emoji: string; accent: string }[] = [
-  { type: "trash", label: "Trash", emoji: "🗑️", accent: "text-orange-600 dark:text-orange-400" },
-  { type: "bathroom", label: "Bathroom", emoji: "✨", accent: "text-blue-600 dark:text-blue-400" },
+  { type: "trash", label: "Trash", emoji: "🚮", accent: "text-orange-600 dark:text-orange-400" },
+  { type: "bathroom", label: "Bathroom", emoji: "🛁", accent: "text-blue-600 dark:text-blue-400" },
   { type: "dishes", label: "Dishes", emoji: "🍽️", accent: "text-teal-600 dark:text-teal-400" },
   { type: "rent", label: "Rent", emoji: "🏠", accent: "text-purple-600 dark:text-purple-400" },
 ];
@@ -85,14 +85,14 @@ export default function MobileEventCalendar({
   const selectedThursday =
     selectedDate.getDay() === 4 ? thursdaysThisMonth.find((t) => isSameDay(t, selectedDate)) ?? null : null;
   const selectedSaturday = selectedDate.getDay() === 6 ? selectedDate : null;
-  const selectedSunday = selectedDate.getDay() === 0 ? selectedDate : null;
+  const selectedFriday = selectedDate.getDay() === 5 ? selectedDate : null;
 
   const clickedTrash = selectedThursday ? getTrashAssignment(selectedThursday, trashTenants) : null;
   const clickedBathroomThursday = selectedThursday ? getBathroomAssignment(selectedThursday, bathroomTenants) : null;
   const clickedBathroomSaturday = selectedSaturday
     ? getBathroomAssignment(getThursdayOfSameWeek(selectedSaturday), bathroomTenants)
     : null;
-  const clickedDishes = selectedSunday ? getDishesAssignment(selectedSunday, dishesTenants) : null;
+  const clickedDishes = selectedFriday ? getDishesAssignment(selectedFriday, dishesTenants) : null;
 
   const clickedBirthdays = birthdays.filter(
     (b) => b.month === selectedDate.getMonth() + 1 && b.day === selectedDate.getDate()
@@ -168,8 +168,59 @@ export default function MobileEventCalendar({
           onActiveStartDateChange={({ activeStartDate }) => activeStartDate && setActiveStart(activeStartDate)}
           tileContent={({ date, view }) => {
             if (view !== "month") return null;
+
             const hasBirthday = birthdays.some((b) => b.month === date.getMonth() + 1 && b.day === date.getDate());
-            return hasBirthday ? <span className="text-[9px] leading-none">🎂</span> : null;
+
+            // Thursday → trash assignment
+            if (date.getDay() === 4) {
+              const { tenant } = getTrashAssignment(date, trashTenants);
+              return (
+                <div className="flex flex-col items-center leading-none gap-0.5">
+                  <span className="text-[10px] leading-none text-orange-500 dark:text-orange-400 truncate max-w-[46px] font-semibold">
+                    🚮 {tenant}
+                  </span>
+                  {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
+                </div>
+              );
+            }
+
+            // Saturday → bathroom assignment
+            if (date.getDay() === 6) {
+              const thursday = getThursdayOfSameWeek(date);
+              const bathroom = getBathroomAssignment(thursday, bathroomTenants);
+              return (
+                <div className="flex flex-col items-center leading-none gap-0.5">
+                  <span className="text-[10px] leading-none text-blue-400 dark:text-blue-300 truncate max-w-[46px] font-semibold">
+                    🛁 {bathroom}
+                  </span>
+                  {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
+                </div>
+              );
+            }
+
+            // Friday → dishes assignment
+            if (date.getDay() === 5) {
+              const dishes = getDishesAssignment(date, dishesTenants);
+              return (
+                <div className="flex flex-col items-center leading-none gap-0.5">
+                  <span className="text-[10px] leading-none text-teal-500 dark:text-teal-300 truncate max-w-[46px] font-semibold">
+                    🍽️ {dishes}
+                  </span>
+                  {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
+                </div>
+              );
+            }
+
+            // Birthday on other days
+            if (hasBirthday) {
+              return (
+                <div className="flex flex-col items-center leading-none">
+                  <span className="text-[9px] leading-none">🎂</span>
+                </div>
+              );
+            }
+
+            return null;
           }}
           tileClassName={({ date, view }) => {
             if (view !== "month") return null;
@@ -179,7 +230,7 @@ export default function MobileEventCalendar({
               classes.push(hasRecycle ? "thursday-recycle" : "thursday-garbage");
             }
             if (date.getDay() === 6) classes.push("bathroom-tile");
-            if (date.getDay() === 0) classes.push("dishes-tile");
+            if (date.getDay() === 5) classes.push("dishes-tile");
             if (birthdays.some((b) => b.month === date.getMonth() + 1 && b.day === date.getDate())) {
               classes.push("birthday-tile");
             }
@@ -197,7 +248,7 @@ export default function MobileEventCalendar({
           ))}
           {clickedTrash && (
             <div className="flex items-start gap-2">
-              <span className="text-gray-500 dark:text-gray-400 text-xs w-20 pt-0.5">🗑️ Trash:</span>
+              <span className="text-gray-500 dark:text-gray-400 text-xs w-20 pt-0.5">🚮 Trash:</span>
               <div className="flex flex-col gap-1">
                 <span className="font-semibold text-gray-800 dark:text-gray-100">{clickedTrash.tenant}</span>
                 <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full w-fit ${
@@ -205,20 +256,20 @@ export default function MobileEventCalendar({
                     ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
                     : "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400"
                 }`}>
-                  {clickedTrash.hasRecycle ? "🗑️ Garbage + ♻️ Recycle" : "🗑️ Garbage only"}
+                  {clickedTrash.hasRecycle ? "🚮 Garbage + ♻️ Recycle" : "🚮 Garbage only"}
                 </span>
               </div>
             </div>
           )}
           {clickedTrash && clickedBathroomThursday && (
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 dark:text-gray-400 text-xs w-20">✨ Bathroom:</span>
+              <span className="text-gray-500 dark:text-gray-400 text-xs w-20">🛁 Bathroom:</span>
               <span className="font-medium text-blue-600 dark:text-blue-400">{clickedBathroomThursday}</span>
             </div>
           )}
           {clickedBathroomSaturday && (
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 dark:text-gray-400 text-xs w-20">✨ Bathroom:</span>
+              <span className="text-gray-500 dark:text-gray-400 text-xs w-20">🛁 Bathroom:</span>
               <span className="font-medium text-blue-600 dark:text-blue-400">{clickedBathroomSaturday}</span>
             </div>
           )}

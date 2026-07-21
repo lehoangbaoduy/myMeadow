@@ -3,7 +3,7 @@ import { useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { getThursdayOfWeek, getThursdaysInMonth } from "@/lib/trash-schedule";
-import { getSundayOfWeek } from "@/lib/dishes-schedule";
+import { getFridayOfWeek } from "@/lib/dishes-schedule";
 import {
   getTrashAssignment,
   getBathroomAssignment,
@@ -69,8 +69,8 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
   // Saturday click → show bathroom detail for that week
   const selectedSaturday = selectedDate.getDay() === 6 ? selectedDate : null;
 
-  // Sunday click → show dishes detail for that week
-  const selectedSunday = selectedDate.getDay() === 0 ? selectedDate : null;
+  // Friday click → show dishes detail for that week
+  const selectedFriday = selectedDate.getDay() === 5 ? selectedDate : null;
 
   const focusedThursday = getThursdayOfWeek(selectedDate);
 
@@ -81,8 +81,8 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
   const clickedBathroomSaturday = selectedSaturday
     ? getBathroomAssignment(getThursdayOfSameWeek(selectedSaturday), bathroomTenants)
     : null;
-  const clickedDishes = selectedSunday
-    ? getDishesAssignment(selectedSunday, dishesTenants)
+  const clickedDishes = selectedFriday
+    ? getDishesAssignment(selectedFriday, dishesTenants)
     : null;
 
   // Birthdays on the selected day
@@ -94,8 +94,8 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
   const currentThursday = getThursdayOfWeek(today);
   const currentTrashTenant = getTrashAssignment(currentThursday, trashTenants).tenant;
   const currentBathroomTenant = getBathroomAssignment(currentThursday, bathroomTenants);
-  const currentSunday = getSundayOfWeek(today);
-  const currentDishesTenant = getDishesAssignment(currentSunday, dishesTenants);
+  const currentFriday = getFridayOfWeek(today);
+  const currentDishesTenant = getDishesAssignment(currentFriday, dishesTenants);
 
   return (
     <div className="bg-white dark:bg-darkCard p-5 rounded-2xl border border-gray-300 dark:border-darkBorder shadow-[var(--shadow-card)]">
@@ -107,7 +107,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
           {/* Trash card */}
           <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-900/40">
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">🗑️ Trash</span>
+              <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">🚮 Trash</span>
               <span className="text-[10px] text-orange-500/80 dark:text-orange-500/60 truncate">This week: {currentTrashTenant}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -135,7 +135,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
           {/* Bathroom card */}
           <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">✨ Bathroom</span>
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">🛁 Bathroom</span>
               <span className="text-[10px] text-blue-500/80 dark:text-blue-500/60 truncate">This week: {currentBathroomTenant}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -272,7 +272,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
             return (
               <div className="flex flex-col items-center leading-none gap-0.5">
                 <span className="text-[10px] leading-none text-orange-500 dark:text-orange-400 truncate max-w-[46px] font-semibold">
-                  🗑️ {tenant}
+                  🚮 {tenant}
                 </span>
                 {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
               </div>
@@ -286,15 +286,15 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
             return (
               <div className="flex flex-col items-center leading-none gap-0.5">
                 <span className="text-[10px] leading-none text-blue-400 dark:text-blue-300 truncate max-w-[46px] font-semibold">
-                  ✨ {bathroom}
+                  🛁 {bathroom}
                 </span>
                 {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
               </div>
             );
           }
 
-          // Sunday → dishes assignment
-          if (date.getDay() === 0) {
+          // Friday → dishes assignment
+          if (date.getDay() === 5) {
             const dishes = getDishesAssignment(date, dishesTenants);
             return (
               <div className="flex flex-col items-center leading-none gap-0.5">
@@ -367,22 +367,22 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
           </h2>
           <div className="flex flex-col gap-2 text-sm">
             <div className="flex items-start gap-2">
-              <span className="text-gray-500 dark:text-gray-400 text-xs w-20 pt-0.5">🗑️ Trash:</span>
+              <span className="text-gray-500 dark:text-gray-400 text-xs w-20 pt-0.5">🚮 Trash:</span>
               <div className="flex flex-col gap-1">
                 <span className="font-semibold text-gray-800 dark:text-gray-100">{clickedTrash.tenant}</span>
                 {clickedTrash.hasRecycle ? (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 w-fit">
-                    🗑️ Garbage + ♻️ Recycle
+                    🚮 Garbage + ♻️ Recycle
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 w-fit">
-                    🗑️ Garbage only
+                    🚮 Garbage only
                   </span>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 dark:text-gray-400 text-xs w-20">✨ Bathroom:</span>
+              <span className="text-gray-500 dark:text-gray-400 text-xs w-20">🛁 Bathroom:</span>
               <span className="font-medium text-blue-600 dark:text-blue-400">{clickedBathroomThursday}</span>
             </div>
           </div>
@@ -396,17 +396,17 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
             Sat, {selectedSaturday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </h2>
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-500 dark:text-gray-400 text-xs">✨ Bathroom duty:</span>
+            <span className="text-gray-500 dark:text-gray-400 text-xs">🛁 Bathroom duty:</span>
             <span className="font-medium text-blue-600 dark:text-blue-400">{clickedBathroomSaturday}</span>
           </div>
         </div>
       )}
 
-      {/* Detail panel — Sunday click shows dishes for that week */}
-      {clickedDishes && selectedSunday && (
+      {/* Detail panel — Friday click shows dishes for that week */}
+      {clickedDishes && selectedFriday && (
         <div className="mt-4 p-4 rounded-md border-l-4 border-teal-400 bg-teal-50 dark:bg-teal-950/30">
           <h2 className="font-semibold text-gray-700 dark:text-gray-200 text-sm mb-1">
-            Sun, {selectedSunday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            Fri, {selectedFriday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </h2>
           <div className="flex items-center gap-2 text-sm">
             <span className="text-gray-500 dark:text-gray-400 text-xs">🍽️ Dish duty:</span>
@@ -417,7 +417,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
 
       {!clickedTrash && !clickedBathroomSaturday && !clickedDishes && clickedBirthdays.length === 0 && (
         <p className="mt-3 text-xs text-gray-400 text-center">
-          Click a Thursday (trash), Saturday (bathroom), Sunday (dishes), or birthday 🎂 to see details
+          Click a Thursday (trash), Saturday (bathroom), Friday (dishes), or birthday 🎂 to see details
         </p>
       )}
     </div>
