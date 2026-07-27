@@ -104,6 +104,11 @@ describe("rotation admin routes: roster CRUD", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.map((u: { tenantId: number }) => u.tenantId)).toEqual([tenantIds[0], tenantIds[1]]);
+    // Regression: PUT's response must include `members`, matching GET's shape.
+    // The client replaces its roster state with this PUT response directly
+    // (useRotationAdmin.putRoster), and eligibleTenantsFor() reads
+    // `u.members` on every roster unit right after.
+    expect(body.every((u: { members: unknown } ) => Array.isArray(u.members))).toBe(true);
   });
 
   it("rejects re-adding a tenant already on the roster", async () => {

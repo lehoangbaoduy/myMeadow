@@ -158,6 +158,11 @@ export async function PUT(req: NextRequest, { params }: { params: { type: string
       tenantId: u.tenantId,
       teamId: u.teamId,
       label: unitLabel(u),
+      members: u.team
+        ? u.team.members.map((m) => ({ tenantId: m.tenant.id, name: m.tenant.name }))
+        : u.tenant
+          ? [{ tenantId: u.tenant.id, name: u.tenant.name }]
+          : [],
     }))
   );
 }
