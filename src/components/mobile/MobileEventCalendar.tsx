@@ -12,6 +12,7 @@ import {
   isSameDay,
 } from "@/lib/rotation-assignments";
 import type { RosterLabelEntry } from "@/lib/duty-tenants";
+import type { RecentCompletedTurn } from "@/lib/recent-completed-turn";
 import { useReminderControls, type ReminderType } from "@/hooks/useReminderControls";
 import MobileCard from "./MobileCard";
 import MobileBottomSheet from "./MobileBottomSheet";
@@ -31,7 +32,14 @@ interface Props {
   trashTenants?: RosterLabelEntry[];
   bathroomTenants?: RosterLabelEntry[];
   dishesTenants?: RosterLabelEntry[];
+  recentCompletedTurn?: RecentCompletedTurn | null;
 }
+
+const CHORE_TABLE_DISPLAY: Record<RecentCompletedTurn["choreTable"], { label: string; emoji: string; accent: string }> = {
+  TRASH: { label: "Trash", emoji: "🚮", accent: "text-orange-600 dark:text-orange-400" },
+  DISHES: { label: "Dishes", emoji: "🍽️", accent: "text-teal-600 dark:text-teal-400" },
+  BATHROOM: { label: "Bathroom", emoji: "🛁", accent: "text-blue-600 dark:text-blue-400" },
+};
 
 const REMINDER_CARDS: { type: ReminderType; label: string; emoji: string; accent: string }[] = [
   { type: "trash", label: "Trash", emoji: "🚮", accent: "text-orange-600 dark:text-orange-400" },
@@ -46,6 +54,7 @@ export default function MobileEventCalendar({
   trashTenants = [],
   bathroomTenants = [],
   dishesTenants = [],
+  recentCompletedTurn = null,
 }: Props) {
   const today = new Date();
   const [selected, setSelected] = useState<Value>(today);
@@ -155,6 +164,24 @@ export default function MobileEventCalendar({
           )}
         </div>
       )}
+
+      <MobileCard className="flex items-center gap-3">
+        <span className="text-xl">✅</span>
+        {recentCompletedTurn ? (
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+              Last completed: <span className={CHORE_TABLE_DISPLAY[recentCompletedTurn.choreTable].accent}>
+                {CHORE_TABLE_DISPLAY[recentCompletedTurn.choreTable].emoji} {CHORE_TABLE_DISPLAY[recentCompletedTurn.choreTable].label}
+              </span>
+            </span>
+            <span className="text-[11px] text-gray-400">
+              {recentCompletedTurn.label} on {new Date(recentCompletedTurn.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </span>
+          </div>
+        ) : (
+          <span className="text-xs text-gray-400">No chores marked completed yet.</span>
+        )}
+      </MobileCard>
 
       <MobileCard className="mm-mobile-calendar">
         <Calendar

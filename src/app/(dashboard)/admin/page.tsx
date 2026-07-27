@@ -9,13 +9,14 @@ import MobileDashboardContent from "@/components/mobile/MobileDashboardContent";
 import MobileEventCalendar from "@/components/mobile/MobileEventCalendar";
 import MobileResidentCount from "@/components/mobile/MobileResidentCount";
 import { getTrashDutyRoster, getBathroomDutyRoster, getDishesDutyRoster } from "@/lib/duty-tenants";
+import { getMostRecentCompletedTurn } from "@/lib/recent-completed-turn";
 
 const AdminPage = async () => {
   const currentUser = await getCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
   const isMobile = (await getViewMode()) === "mobile";
 
-  const [bills, tenantDobs, trashTenants, bathroomTenants, dishesTenants, runOutItems] = await Promise.all([
+  const [bills, tenantDobs, trashTenants, bathroomTenants, dishesTenants, runOutItems, recentCompletedTurn] = await Promise.all([
     prisma.utilityBill.findMany({ orderBy: [{ year: "asc" }, { month: "asc" }] }),
     prisma.tenant.findMany({
       where: { isActive: true, dob: { not: null } },
@@ -25,6 +26,7 @@ const AdminPage = async () => {
     getBathroomDutyRoster(),
     getDishesDutyRoster(),
     prisma.inventoryRunOut.findMany({ where: { resolved: false }, orderBy: { reportedAt: "desc" } }),
+    getMostRecentCompletedTurn(),
   ]);
 
   const latestBill = bills.length > 0 ? bills[bills.length - 1] : null;
@@ -52,6 +54,7 @@ const AdminPage = async () => {
           trashTenants={trashTenants}
           bathroomTenants={bathroomTenants}
           dishesTenants={dishesTenants}
+          recentCompletedTurn={recentCompletedTurn}
         />
         <MobileResidentCount />
         <Annoucements isAdmin={isAdmin} />
@@ -71,6 +74,7 @@ const AdminPage = async () => {
           trashTenants={trashTenants}
           bathroomTenants={bathroomTenants}
           dishesTenants={dishesTenants}
+          recentCompletedTurn={recentCompletedTurn}
         />
         <ResidentCount />
         <Annoucements isAdmin={isAdmin} />
