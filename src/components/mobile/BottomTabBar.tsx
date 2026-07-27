@@ -32,6 +32,13 @@ const ManagementIcon = () => (
   </svg>
 );
 
+const PersonalInventoryIcon = () => (
+  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 7h-3V6a4 4 0 0 0-8 0v1H6a1 1 0 0 0-1 1v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1Z" />
+    <path d="M9 11v2" /><path d="M15 11v2" />
+  </svg>
+);
+
 const RotationsIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 12a9 9 0 1 1-3-6.7" />
@@ -78,6 +85,7 @@ export default function BottomTabBar({ role }: Props) {
           { label: "Management", href: "/management", icon: <ManagementIcon /> },
         ]
       : []),
+    { label: "My Inventory", href: "/personal-inventory", icon: <PersonalInventoryIcon /> },
     { label: "Profile", href: "/profile", icon: <Image src="/profile.png" alt="" width={20} height={20} /> },
   ];
 

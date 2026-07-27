@@ -22,6 +22,14 @@ const ManagementIcon = () => (
   </svg>
 );
 
+const PersonalInventoryIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 7h-3V6a4 4 0 0 0-8 0v1H6a1 1 0 0 0-1 1v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1Z" />
+    <path d="M9 11v2" /><path d="M15 11v2" />
+  </svg>
+);
+
 const RotationsIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
     strokeLinecap="round" strokeLinejoin="round">
@@ -48,6 +56,7 @@ const menuItems: { title: string; items: MenuItem[] }[] = [
       { icon: "/student.png", label: "Residents",  href: "/list/residents",   visible: ["ADMIN"] },
       { icon: "/setting.png", label: "Utilities",  href: "/utilities",        visible: ["ADMIN", "TENANT"] },
       { svgIcon: InventoryIcon, label: "Inventory",  href: "/kitchen-inventory",visible: ["ADMIN", "TENANT"] },
+      { svgIcon: PersonalInventoryIcon, label: "My Inventory", href: "/personal-inventory", visible: ["ADMIN", "TENANT"] },
       { svgIcon: RotationsIcon, label: "Rotations",  href: "/admin/rotations", visible: ["ADMIN"] },
       { svgIcon: ManagementIcon, label: "Management", href: "/management",    visible: ["ADMIN"] },
     ],

@@ -10,5 +10,9 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    // Integration tests share one local SQLite file (prisma/dev.db) with real
+    // writes; running test files in parallel opens concurrent connections
+    // that race for the write lock and time out. Serialize file execution.
+    fileParallelism: false,
   },
 });
