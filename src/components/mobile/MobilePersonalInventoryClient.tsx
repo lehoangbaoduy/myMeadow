@@ -1,13 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { usePersonalInventory } from "@/hooks/usePersonalInventory";
 import { isLowStock, isExpiringSoon, isExpired } from "@/lib/personal-inventory";
+import type { PersonalInventoryItem } from "@/lib/personal-inventory";
 import MobileCard from "./MobileCard";
 import MobileBottomSheet from "./MobileBottomSheet";
 
 export default function MobilePersonalInventoryClient() {
   const {
     items,
+    sharedWithMe,
+    roommates,
     loading,
     error,
     showForm,
@@ -15,12 +19,28 @@ export default function MobilePersonalInventoryClient() {
     form,
     setForm,
     savingId,
+    sharingId,
     openCreateForm,
     openEditForm,
     closeForm,
     handleSubmit,
     handleDelete,
+    handleShareChange,
   } = usePersonalInventory();
+
+  const [sharingItem, setSharingItem] = useState<PersonalInventoryItem | null>(null);
+  const [selectedTenantIds, setSelectedTenantIds] = useState<number[]>([]);
+
+  const openShare = (item: PersonalInventoryItem) => {
+    setSharingItem(item);
+    setSelectedTenantIds(item.sharedWith.map((s) => s.tenantId));
+  };
+
+  const saveShare = async () => {
+    if (!sharingItem) return;
+    await handleShareChange(sharingItem.id, selectedTenantIds);
+    setSharingItem(null);
+  };
 
   if (loading) {
     return <div className="p-6 text-center text-gray-400">Loading your inventory…</div>;
@@ -31,7 +51,7 @@ export default function MobilePersonalInventoryClient() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">My Inventory</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Only you can see and edit these.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Only you can edit — sharing is view-only.</p>
         </div>
         <button
           onClick={openCreateForm}
@@ -62,7 +82,7 @@ export default function MobilePersonalInventoryClient() {
                 </p>
               )}
               {item.description && <p className="text-xs text-gray-400 mb-2">{item.description}</p>}
-              <div className="flex flex-wrap gap-1.5 mb-3">
+              <div className="flex flex-wrap gap-1.5 mb-2">
                 {isLowStock(item) && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-medium">
                     Low stock
@@ -80,7 +100,18 @@ export default function MobilePersonalInventoryClient() {
                   )
                 )}
               </div>
+              {item.sharedWith.length > 0 && (
+                <p className="text-[10px] text-gray-400 mb-3">
+                  Shared with {item.sharedWith.map((s) => s.name).join(", ")}
+                </p>
+              )}
               <div className="flex gap-2">
+                <button
+                  onClick={() => openShare(item)}
+                  className="flex-1 py-1.5 text-xs font-medium border border-meadowBorder dark:border-darkBorder text-gray-600 dark:text-gray-300 rounded-md active:scale-[0.98] transition-transform"
+                >
+                  Share
+                </button>
                 <button
                   onClick={() => openEditForm(item)}
                   className="flex-1 py-1.5 text-xs font-medium border border-meadowBorder dark:border-darkBorder text-gray-600 dark:text-gray-300 rounded-md active:scale-[0.98] transition-transform"
@@ -99,6 +130,68 @@ export default function MobilePersonalInventoryClient() {
           ))}
         </div>
       )}
+
+      {sharedWithMe.length > 0 && (
+        <div className="flex flex-col gap-3 mt-2">
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Shared with you</h2>
+          {sharedWithMe.map((item) => (
+            <MobileCard key={item.id}>
+              <div className="flex items-start justify-between mb-1">
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{item.name}</span>
+                {item.category && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-meadowMuted dark:bg-darkSurface text-gray-500 dark:text-gray-400">
+                    {item.category}
+                  </span>
+                )}
+              </div>
+              {item.quantity !== null && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Qty: <span className="font-semibold text-gray-700 dark:text-gray-200">{item.quantity}</span>
+                  {item.unit && ` ${item.unit}`}
+                </p>
+              )}
+              {item.description && <p className="text-xs text-gray-400 mb-2">{item.description}</p>}
+              <p className="text-[10px] text-gray-400">Shared by {item.ownerName}</p>
+            </MobileCard>
+          ))}
+        </div>
+      )}
+
+      <MobileBottomSheet open={sharingItem !== null} onClose={() => setSharingItem(null)} title={`Share "${sharingItem?.name ?? ""}"`}>
+        <div className="flex flex-col gap-3">
+          {roommates.length === 0 ? (
+            <p className="text-sm text-gray-400">No other residents to share with.</p>
+          ) : (
+            <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+              {roommates.map((r) => (
+                <label key={r.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                  <input
+                    type="checkbox"
+                    checked={selectedTenantIds.includes(r.id)}
+                    onChange={(e) =>
+                      setSelectedTenantIds((prev) =>
+                        e.target.checked ? [...prev, r.id] : prev.filter((id) => id !== r.id)
+                      )
+                    }
+                    className="rounded border-meadowBorder dark:border-darkBorder text-meadowOrange focus:ring-meadowOrange"
+                  />
+                  {r.name}
+                </label>
+              ))}
+            </div>
+          )}
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
+
+          <button
+            onClick={saveShare}
+            disabled={sharingId !== null}
+            className="w-full py-2.5 bg-meadowOrange hover:bg-orange-600 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50 active:scale-[0.98]"
+          >
+            {sharingId !== null ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </MobileBottomSheet>
 
       <MobileBottomSheet open={showForm} onClose={closeForm} title={editingId !== null ? "Edit Item" : "Add Item"}>
         <div className="flex flex-col gap-3">

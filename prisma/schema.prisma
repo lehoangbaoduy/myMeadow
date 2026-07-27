@@ -34,29 +34,30 @@ model User {
 }
 
 model Tenant {
-  id                     Int                     @id @default(autoincrement())
-  name                   String
-  nickname               String?
-  avatarData             Bytes?
-  avatarMimeType         String?
-  isActive               Boolean                 @default(true)
-  dob                    DateTime?
-  gender                 Gender
-  phone                  String?
-  email                  String?
-  roomNumber             String?
-  notes                  String?
-  utilityShare           Float                   @default(1)
-  rentAmount             Float?
-  userId                 Int                     @unique
-  user                   User                    @relation(fields: [userId], references: [id])
-  maintenanceRequests    MaintenanceRequest[]
-  rentReminderLogs       RentReminderLog[]
-  rotationUnits          RotationUnit[]
-  rotationTeamMembers    RotationTeamMember[]
-  personalInventoryItems PersonalInventoryItem[]
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  id                      Int                      @id @default(autoincrement())
+  name                    String
+  nickname                String?
+  avatarData              Bytes?
+  avatarMimeType          String?
+  isActive                Boolean                  @default(true)
+  dob                     DateTime?
+  gender                  Gender
+  phone                   String?
+  email                   String?
+  roomNumber              String?
+  notes                   String?
+  utilityShare            Float                    @default(1)
+  rentAmount              Float?
+  userId                  Int                      @unique
+  user                    User                     @relation(fields: [userId], references: [id])
+  maintenanceRequests     MaintenanceRequest[]
+  rentReminderLogs        RentReminderLog[]
+  rotationUnits           RotationUnit[]
+  rotationTeamMembers     RotationTeamMember[]
+  personalInventoryItems  PersonalInventoryItem[]
+  personalInventoryShares PersonalInventoryShare[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
 }
 
 model RotationTeam {
@@ -310,5 +311,22 @@ model PersonalInventoryItem {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  shares PersonalInventoryShare[]
+
   @@unique([tenantId, name])
+}
+
+/// Read-only visibility grant: the owner (tenant of the parent item) shares
+/// an item with another resident, who can view but not edit or delete it.
+/// Ownership/write access always stays with PersonalInventoryItem.tenantId.
+model PersonalInventoryShare {
+  id        Int                   @id @default(autoincrement())
+  itemId    Int
+  item      PersonalInventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tenantId  Int
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime              @default(now())
+
+  @@unique([itemId, tenantId])
+  @@index([tenantId])
 }

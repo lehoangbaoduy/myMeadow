@@ -13,9 +13,10 @@ import { PATCH as itemPatch, DELETE as itemDelete } from "@/app/api/inventory-pe
 /**
  * Integration tests against a real local SQLite database (see
  * rotation-admin-routes.test.ts for the rationale). Focus here is the
- * ownership check on [id]/route.ts — personal inventory is NOT shared like
- * the kitchen inventory, so a tenant must never be able to read, edit, or
- * delete another tenant's items via a guessed id.
+ * ownership check on [id]/route.ts — unlike the kitchen inventory (shared
+ * unconditionally with everyone), personal inventory items are private by
+ * default; visibility to another resident is opt-in via PersonalInventoryShare
+ * and never grants write access (see personal-inventory-sharing.test.ts).
  */
 
 const ADMIN_CLERK_ID = "test_pi_admin";
@@ -85,8 +86,8 @@ describe("personal inventory: ownership", () => {
     mockAuthAs(TENANT_A_CLERK_ID);
     const req = new NextRequest("http://localhost/api/inventory-personal");
     const res = await listGet(req);
-    const items = await res.json();
-    expect(items.every((i: { name: string }) => i.name !== "Vitamins")).toBe(true);
+    const body = await res.json();
+    expect(body.own.every((i: { name: string }) => i.name !== "Vitamins")).toBe(true);
   });
 
   it("tenant B cannot PATCH tenant A's item (403)", async () => {

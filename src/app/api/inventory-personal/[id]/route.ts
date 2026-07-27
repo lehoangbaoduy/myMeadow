@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import type { PersonalInventoryItem } from "@prisma/client";
+import { authorizeItemWrite } from "@/lib/personal-inventory-authz";
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).optional(),
@@ -14,33 +14,12 @@ const updateSchema = z.object({
   lowStockThreshold: z.number().finite().nullable().optional(),
 });
 
-async function authorizeItemAccess(
-  clerkId: string,
-  itemId: number
-): Promise<NextResponse | { item: PersonalInventoryItem }> {
-  const caller = await prisma.user.findUnique({
-    where: { clerkId },
-    include: { tenant: { select: { id: true } } },
-  });
-  if (!caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const item = await prisma.personalInventoryItem.findUnique({ where: { id: itemId } });
-  if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const isOwner = caller.tenant?.id === item.tenantId;
-  if (!isOwner && caller.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  return { item };
-}
-
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }): Promise<NextResponse> {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const itemId = Number(params.id);
-  const authz = await authorizeItemAccess(userId, itemId);
+  const authz = await authorizeItemWrite(userId, itemId);
   if (authz instanceof NextResponse) return authz;
 
   const parsed = updateSchema.safeParse(await req.json());
@@ -75,7 +54,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const itemId = Number(params.id);
-  const authz = await authorizeItemAccess(userId, itemId);
+  const authz = await authorizeItemWrite(userId, itemId);
   if (authz instanceof NextResponse) return authz;
 
   await prisma.personalInventoryItem.delete({ where: { id: itemId } });

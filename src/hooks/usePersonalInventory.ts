@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { PersonalInventoryItem, PersonalInventoryItemInput } from "@/lib/personal-inventory";
+import type {
+  PersonalInventoryItem,
+  PersonalInventoryItemInput,
+  SharedPersonalInventoryItem,
+} from "@/lib/personal-inventory";
 
 const EMPTY_FORM: PersonalInventoryItemInput = {
   name: "",
@@ -13,19 +17,33 @@ const EMPTY_FORM: PersonalInventoryItemInput = {
   lowStockThreshold: null,
 };
 
+interface Roommate {
+  id: number;
+  name: string;
+}
+
 export function usePersonalInventory() {
   const [items, setItems] = useState<PersonalInventoryItem[]>([]);
+  const [sharedWithMe, setSharedWithMe] = useState<SharedPersonalInventoryItem[]>([]);
+  const [roommates, setRoommates] = useState<Roommate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<PersonalInventoryItemInput>(EMPTY_FORM);
   const [savingId, setSavingId] = useState<number | "new" | null>(null);
+  const [sharingId, setSharingId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("/api/inventory-personal")
-      .then((r) => r.json())
-      .then(setItems)
+    Promise.all([
+      fetch("/api/inventory-personal").then((r) => r.json()),
+      fetch("/api/inventory-personal/roommates").then((r) => r.json()),
+    ])
+      .then(([listBody, roommateBody]) => {
+        setItems(listBody.own);
+        setSharedWithMe(listBody.sharedWithMe);
+        setRoommates(roommateBody);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -89,7 +107,9 @@ export function usePersonalInventory() {
 
     const saved: PersonalInventoryItem = await res.json();
     setItems((prev) => {
-      if (isEdit) return prev.map((i) => (i.id === saved.id ? saved : i));
+      // PATCH's response doesn't recompute sharedWith, so carry the
+      // existing value forward on edit instead of dropping it to [].
+      if (isEdit) return prev.map((i) => (i.id === saved.id ? { ...saved, sharedWith: i.sharedWith } : i));
       return [...prev, saved].sort((a, b) => a.name.localeCompare(b.name));
     });
     setShowForm(false);
@@ -104,8 +124,27 @@ export function usePersonalInventory() {
     }
   };
 
+  const handleShareChange = async (id: number, tenantIds: number[]) => {
+    setSharingId(id);
+    const res = await fetch(`/api/inventory-personal/${id}/share`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantIds }),
+    });
+    setSharingId(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setError(typeof body?.error === "string" ? body.error : "Failed to update sharing");
+      return;
+    }
+    const sharedWith: { tenantId: number; name: string }[] = await res.json();
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, sharedWith } : i)));
+  };
+
   return {
     items,
+    sharedWithMe,
+    roommates,
     loading,
     error,
     showForm,
@@ -113,10 +152,12 @@ export function usePersonalInventory() {
     form,
     setForm,
     savingId,
+    sharingId,
     openCreateForm,
     openEditForm,
     closeForm,
     handleSubmit,
     handleDelete,
+    handleShareChange,
   };
 }

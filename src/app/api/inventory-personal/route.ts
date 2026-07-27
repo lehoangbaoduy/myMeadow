@@ -13,6 +13,34 @@ const createSchema = z.object({
   lowStockThreshold: z.number().finite().nullable().optional(),
 });
 
+const itemWithSharesInclude = {
+  shares: { include: { tenant: { select: { id: true, name: true } } } },
+};
+
+function serializeOwnItem(item: {
+  id: number;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  category: string | null;
+  description: string | null;
+  expirationDate: Date | null;
+  lowStockThreshold: number | null;
+  shares: { tenant: { id: number; name: string } }[];
+}) {
+  return {
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity,
+    unit: item.unit,
+    category: item.category,
+    description: item.description,
+    expirationDate: item.expirationDate ? item.expirationDate.toISOString() : null,
+    lowStockThreshold: item.lowStockThreshold,
+    sharedWith: item.shares.map((s) => ({ tenantId: s.tenant.id, name: s.tenant.name })),
+  };
+}
+
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,18 +57,41 @@ export async function GET(req: NextRequest) {
       const items = await prisma.personalInventoryItem.findMany({
         where: { tenantId: Number(tenantIdParam) },
         orderBy: { name: "asc" },
+        include: itemWithSharesInclude,
       });
-      return NextResponse.json(items);
+      return NextResponse.json({ own: items.map(serializeOwnItem), sharedWithMe: [] });
     }
   }
 
-  if (!caller.tenant?.id) return NextResponse.json([]);
+  if (!caller.tenant?.id) return NextResponse.json({ own: [], sharedWithMe: [] });
 
-  const items = await prisma.personalInventoryItem.findMany({
-    where: { tenantId: caller.tenant.id },
-    orderBy: { name: "asc" },
-  });
-  return NextResponse.json(items);
+  const [items, sharedRows] = await Promise.all([
+    prisma.personalInventoryItem.findMany({
+      where: { tenantId: caller.tenant.id },
+      orderBy: { name: "asc" },
+      include: itemWithSharesInclude,
+    }),
+    prisma.personalInventoryShare.findMany({
+      where: { tenantId: caller.tenant.id },
+      include: { item: { include: { tenant: { select: { id: true, name: true } } } } },
+      orderBy: { item: { name: "asc" } },
+    }),
+  ]);
+
+  const sharedWithMe = sharedRows.map((s) => ({
+    id: s.item.id,
+    name: s.item.name,
+    quantity: s.item.quantity,
+    unit: s.item.unit,
+    category: s.item.category,
+    description: s.item.description,
+    expirationDate: s.item.expirationDate ? s.item.expirationDate.toISOString() : null,
+    lowStockThreshold: s.item.lowStockThreshold,
+    ownerTenantId: s.item.tenant.id,
+    ownerName: s.item.tenant.name,
+  }));
+
+  return NextResponse.json({ own: items.map(serializeOwnItem), sharedWithMe });
 }
 
 export async function POST(req: NextRequest) {
@@ -72,7 +123,7 @@ export async function POST(req: NextRequest) {
         lowStockThreshold: parsed.data.lowStockThreshold ?? null,
       },
     });
-    return NextResponse.json(item, { status: 201 });
+    return NextResponse.json(serializeOwnItem({ ...item, shares: [] }), { status: 201 });
   } catch {
     return NextResponse.json({ error: "You already have an item with this name" }, { status: 409 });
   }
