@@ -52,6 +52,11 @@ export async function POST(
     return NextResponse.json({ error: "placeholderTenantId does not refer to a placeholder resident" }, { status: 400 });
   }
 
+  // Placeholders never occupy a rotation slot (RotationUnit/RotationTeamMember both
+  // restrict deletion of a referenced tenant), so there's no chore-rotation history to
+  // repoint here. Maintenance requests filed against the room while it was a placeholder
+  // are repointed to the real tenant rather than deleted, so that history stays
+  // attributable instead of disappearing.
   const [merged] = await prisma.$transaction([
     prisma.tenant.update({
       where: { id: realTenantId },
@@ -59,15 +64,13 @@ export async function POST(
         roomNumber: placeholderTenant.roomNumber,
         rentAmount: placeholderTenant.rentAmount,
         utilityShare: placeholderTenant.utilityShare,
-        bathroomDuty: placeholderTenant.bathroomDuty,
-        dishesDuty: placeholderTenant.dishesDuty,
-        trashDuty: placeholderTenant.trashDuty,
       },
     }),
-    prisma.trashAssignment.deleteMany({ where: { tenantId: placeholderTenantId } }),
-    prisma.dishesAssignment.deleteMany({ where: { tenantId: placeholderTenantId } }),
+    prisma.maintenanceRequest.updateMany({
+      where: { tenantId: placeholderTenantId },
+      data: { tenantId: realTenantId },
+    }),
     prisma.rentReminderLog.deleteMany({ where: { tenantId: placeholderTenantId } }),
-    prisma.maintenanceRequest.deleteMany({ where: { tenantId: placeholderTenantId } }),
     prisma.tenant.delete({ where: { id: placeholderTenantId } }),
     prisma.user.delete({ where: { id: placeholderTenant.user.id } }),
   ]);

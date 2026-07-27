@@ -8,22 +8,22 @@ import Annoucements from "@/components/Announcements";
 import MobileDashboardContent from "@/components/mobile/MobileDashboardContent";
 import MobileEventCalendar from "@/components/mobile/MobileEventCalendar";
 import MobileResidentCount from "@/components/mobile/MobileResidentCount";
-import { getTrashDutyTenants, getBathroomDutyTenants, getDishesDutyTenants } from "@/lib/duty-tenants";
+import { getTrashDutyRoster, getBathroomDutyRoster, getDishesDutyRoster } from "@/lib/duty-tenants";
 
 const AdminPage = async () => {
   const currentUser = await getCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
   const isMobile = (await getViewMode()) === "mobile";
 
-  const [bills, tenantDobs, trashTenantRows, bathroomTenantRows, dishesDutyTenantRows, runOutItems] = await Promise.all([
+  const [bills, tenantDobs, trashTenants, bathroomTenants, dishesTenants, runOutItems] = await Promise.all([
     prisma.utilityBill.findMany({ orderBy: [{ year: "asc" }, { month: "asc" }] }),
     prisma.tenant.findMany({
       where: { isActive: true, dob: { not: null } },
       select: { name: true, dob: true },
     }),
-    getTrashDutyTenants(),
-    getBathroomDutyTenants(),
-    getDishesDutyTenants(),
+    getTrashDutyRoster(),
+    getBathroomDutyRoster(),
+    getDishesDutyRoster(),
     prisma.inventoryRunOut.findMany({ where: { resolved: false }, orderBy: { reportedAt: "desc" } }),
   ]);
 
@@ -36,10 +36,6 @@ const AdminPage = async () => {
       month: new Date(t.dob).getUTCMonth() + 1,
       day: new Date(t.dob).getUTCDate(),
     }));
-
-  const trashTenants = trashTenantRows.map((t) => t.name);
-  const bathroomTenants = bathroomTenantRows.map((t) => t.name);
-  const dishesTenants = dishesDutyTenantRows.map((t) => t.name);
 
   if (isMobile) {
     return (

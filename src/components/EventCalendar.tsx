@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { getThursdayOfWeek, getThursdaysInMonth } from "@/lib/trash-schedule";
@@ -8,9 +9,9 @@ import {
   getTrashAssignment,
   getBathroomAssignment,
   getDishesAssignment,
-  getThursdayOfSameWeek,
   isSameDay,
 } from "@/lib/rotation-assignments";
+import type { RosterLabelEntry } from "@/lib/duty-tenants";
 import { useReminderControls } from "@/hooks/useReminderControls";
 
 type ValuePiece = Date | null;
@@ -25,9 +26,9 @@ interface Birthday {
 interface Props {
   isAdmin?: boolean;
   birthdays?: Birthday[];
-  trashTenants?: string[];
-  bathroomTenants?: string[];
-  dishesTenants?: string[];
+  trashTenants?: RosterLabelEntry[];
+  bathroomTenants?: RosterLabelEntry[];
+  dishesTenants?: RosterLabelEntry[];
 }
 
 const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bathroomTenants = [], dishesTenants = [] }: Props) => {
@@ -66,8 +67,8 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
       ? thursdaysThisMonth.find((t) => isSameDay(t, selectedDate)) ?? null
       : null;
 
-  // Saturday click → show bathroom detail for that week
-  const selectedSaturday = selectedDate.getDay() === 6 ? selectedDate : null;
+  // The 1st or 15th → show bathroom detail (semimonthly schedule, independent of weekday)
+  const isBathroomDay = selectedDate.getDate() === 1 || selectedDate.getDate() === 15;
 
   // Friday click → show dishes detail for that week
   const selectedFriday = selectedDate.getDay() === 5 ? selectedDate : null;
@@ -75,12 +76,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
   const focusedThursday = getThursdayOfWeek(selectedDate);
 
   const clickedTrash = selectedThursday ? getTrashAssignment(selectedThursday, trashTenants) : null;
-  const clickedBathroomThursday = selectedThursday
-    ? getBathroomAssignment(selectedThursday, bathroomTenants)
-    : null;
-  const clickedBathroomSaturday = selectedSaturday
-    ? getBathroomAssignment(getThursdayOfSameWeek(selectedSaturday), bathroomTenants)
-    : null;
+  const clickedBathroom = isBathroomDay ? getBathroomAssignment(selectedDate, bathroomTenants) : null;
   const clickedDishes = selectedFriday
     ? getDishesAssignment(selectedFriday, dishesTenants)
     : null;
@@ -90,10 +86,10 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
     (b) => b.month === selectedDate.getMonth() + 1 && b.day === selectedDate.getDate()
   );
 
-  // Current week's assignments (for admin remind buttons tooltip)
+  // Current assignments (for admin remind buttons tooltip)
   const currentThursday = getThursdayOfWeek(today);
   const currentTrashTenant = getTrashAssignment(currentThursday, trashTenants).tenant;
-  const currentBathroomTenant = getBathroomAssignment(currentThursday, bathroomTenants);
+  const currentBathroomTenant = getBathroomAssignment(today, bathroomTenants);
   const currentFriday = getFridayOfWeek(today);
   const currentDishesTenant = getDishesAssignment(currentFriday, dishesTenants);
 
@@ -136,7 +132,7 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
           <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
             <div className="flex flex-col min-w-0">
               <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">🛁 Bathroom</span>
-              <span className="text-[10px] text-blue-500/80 dark:text-blue-500/60 truncate">This week: {currentBathroomTenant}</span>
+              <span className="text-[10px] text-blue-500/80 dark:text-blue-500/60 truncate">Current turn: {currentBathroomTenant}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
@@ -266,56 +262,46 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
           );
           const hasBirthday = dayBirthdays.length > 0;
 
+          const badges: ReactNode[] = [];
+
           // Thursday → trash assignment
           if (date.getDay() === 4) {
             const { tenant } = getTrashAssignment(date, trashTenants);
-            return (
-              <div className="flex flex-col items-center leading-none gap-0.5">
-                <span className="text-[10px] leading-none text-orange-500 dark:text-orange-400 truncate max-w-[46px] font-semibold">
-                  🚮 {tenant}
-                </span>
-                {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
-              </div>
+            badges.push(
+              <span key="trash" className="text-[10px] leading-none text-orange-500 dark:text-orange-400 truncate max-w-[46px] font-semibold">
+                🚮 {tenant}
+              </span>
             );
           }
 
-          // Saturday → bathroom assignment
-          if (date.getDay() === 6) {
-            const thursday = getThursdayOfSameWeek(date);
-            const bathroom = getBathroomAssignment(thursday, bathroomTenants);
-            return (
-              <div className="flex flex-col items-center leading-none gap-0.5">
-                <span className="text-[10px] leading-none text-blue-400 dark:text-blue-300 truncate max-w-[46px] font-semibold">
-                  🛁 {bathroom}
-                </span>
-                {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
-              </div>
+          // 1st/15th → bathroom assignment (semimonthly, independent of weekday)
+          if (date.getDate() === 1 || date.getDate() === 15) {
+            const bathroom = getBathroomAssignment(date, bathroomTenants);
+            badges.push(
+              <span key="bathroom" className="text-[10px] leading-none text-blue-400 dark:text-blue-300 truncate max-w-[46px] font-semibold">
+                🛁 {bathroom}
+              </span>
             );
           }
 
           // Friday → dishes assignment
           if (date.getDay() === 5) {
             const dishes = getDishesAssignment(date, dishesTenants);
-            return (
-              <div className="flex flex-col items-center leading-none gap-0.5">
-                <span className="text-[10px] leading-none text-teal-500 dark:text-teal-300 truncate max-w-[46px] font-semibold">
-                  🍽️ {dishes}
-                </span>
-                {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
-              </div>
+            badges.push(
+              <span key="dishes" className="text-[10px] leading-none text-teal-500 dark:text-teal-300 truncate max-w-[46px] font-semibold">
+                🍽️ {dishes}
+              </span>
             );
           }
 
-          // Birthday on other days
-          if (hasBirthday) {
-            return (
-              <div className="flex flex-col items-center leading-none">
-                <span className="text-[10px] leading-none">🎂</span>
-              </div>
-            );
-          }
+          if (badges.length === 0 && !hasBirthday) return null;
 
-          return null;
+          return (
+            <div className="flex flex-col items-center leading-none gap-0.5">
+              {badges}
+              {hasBirthday && <span className="text-[9px] leading-none">🎂</span>}
+            </div>
+          );
         }}
         tileClassName={({ date, view }) => {
           if (view !== "month") return null;
@@ -381,23 +367,19 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500 dark:text-gray-400 text-xs w-20">🛁 Bathroom:</span>
-              <span className="font-medium text-blue-600 dark:text-blue-400">{clickedBathroomThursday}</span>
-            </div>
           </div>
         </div>
       )}
 
-      {/* Detail panel — Saturday click shows bathroom for that week */}
-      {clickedBathroomSaturday && selectedSaturday && !clickedTrash && (
+      {/* Detail panel — 1st/15th click shows the bathroom turn (semimonthly, independent of weekday) */}
+      {clickedBathroom && isBathroomDay && (
         <div className="mt-4 p-4 rounded-md border-l-4 border-blue-400 bg-blue-50 dark:bg-blue-950/30">
           <h2 className="font-semibold text-gray-700 dark:text-gray-200 text-sm mb-1">
-            Sat, {selectedSaturday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </h2>
           <div className="flex items-center gap-2 text-sm">
             <span className="text-gray-500 dark:text-gray-400 text-xs">🛁 Bathroom duty:</span>
-            <span className="font-medium text-blue-600 dark:text-blue-400">{clickedBathroomSaturday}</span>
+            <span className="font-medium text-blue-600 dark:text-blue-400">{clickedBathroom}</span>
           </div>
         </div>
       )}
@@ -415,9 +397,9 @@ const EventCalendar = ({ isAdmin = false, birthdays = [], trashTenants = [], bat
         </div>
       )}
 
-      {!clickedTrash && !clickedBathroomSaturday && !clickedDishes && clickedBirthdays.length === 0 && (
+      {!clickedTrash && !(clickedBathroom && isBathroomDay) && !clickedDishes && clickedBirthdays.length === 0 && (
         <p className="mt-3 text-xs text-gray-400 text-center">
-          Click a Thursday (trash), Saturday (bathroom), Friday (dishes), or birthday 🎂 to see details
+          Click a Thursday (trash), the 1st/15th (bathroom), Friday (dishes), or birthday 🎂 to see details
         </p>
       )}
     </div>

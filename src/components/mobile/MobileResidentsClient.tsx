@@ -169,33 +169,6 @@ export default function MobileResidentsClient({ tenants: initialTenants, pending
             <label className={labelClass}>Monthly Rent ($)</label>
             <input type="number" min={0} step={0.01} value={editForm.rentAmount} onChange={updateForm("rentAmount")} placeholder="Leave blank to disable rent reminders" className={inputClass} />
           </div>
-          <label className="flex items-center gap-3 py-1">
-            <input
-              type="checkbox"
-              checked={editForm.bathroomDuty}
-              onChange={(e) => setEditForm((p) => ({ ...p, bathroomDuty: e.target.checked }))}
-              className="w-4 h-4 accent-meadowOrange"
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Bathroom duty</span>
-          </label>
-          <label className="flex items-center gap-3 py-1">
-            <input
-              type="checkbox"
-              checked={editForm.dishesDuty}
-              onChange={(e) => setEditForm((p) => ({ ...p, dishesDuty: e.target.checked }))}
-              className="w-4 h-4 accent-meadowOrange"
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Dish duty</span>
-          </label>
-          <label className="flex items-center gap-3 py-1">
-            <input
-              type="checkbox"
-              checked={editForm.trashDuty}
-              onChange={(e) => setEditForm((p) => ({ ...p, trashDuty: e.target.checked }))}
-              className="w-4 h-4 accent-meadowOrange"
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Trash duty</span>
-          </label>
           {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
           <div className="flex gap-3">
             <button onClick={handleSaveEdit} disabled={saving}
@@ -239,33 +212,6 @@ export default function MobileResidentsClient({ tenants: initialTenants, pending
             <label className={labelClass}>Notes</label>
             <textarea rows={3} value={addForm.notes} onChange={(e) => setAddForm((p) => ({ ...p, notes: e.target.value }))} className={`${inputClass} resize-none`} />
           </div>
-          <label className="flex items-center gap-3 py-1">
-            <input
-              type="checkbox"
-              checked={addForm.bathroomDuty}
-              onChange={(e) => setAddForm((p) => ({ ...p, bathroomDuty: e.target.checked }))}
-              className="w-4 h-4 accent-meadowOrange"
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Bathroom duty</span>
-          </label>
-          <label className="flex items-center gap-3 py-1">
-            <input
-              type="checkbox"
-              checked={addForm.dishesDuty}
-              onChange={(e) => setAddForm((p) => ({ ...p, dishesDuty: e.target.checked }))}
-              className="w-4 h-4 accent-meadowOrange"
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Dish duty</span>
-          </label>
-          <label className="flex items-center gap-3 py-1">
-            <input
-              type="checkbox"
-              checked={addForm.trashDuty}
-              onChange={(e) => setAddForm((p) => ({ ...p, trashDuty: e.target.checked }))}
-              className="w-4 h-4 accent-meadowOrange"
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Trash duty</span>
-          </label>
           {addError && <p className="text-red-500 text-sm">{addError}</p>}
           <div className="flex gap-3">
             <button onClick={handleAddPlaceholder} disabled={adding || !addForm.name}

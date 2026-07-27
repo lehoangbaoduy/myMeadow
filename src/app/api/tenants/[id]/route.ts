@@ -50,7 +50,7 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const { name, dob, gender, roomNumber, phone, email, notes, nickname, bathroomDuty, dishesDuty, trashDuty } = body;
+  const { name, dob, gender, roomNumber, phone, email, notes, nickname } = body;
 
   const financialParsed = financialFieldsSchema.safeParse({
     utilityShare: body.utilityShare,
@@ -72,9 +72,6 @@ export async function PUT(
       ...(email !== undefined && { email }),
       ...(notes !== undefined && { notes }),
       ...(nickname !== undefined && { nickname }),
-      ...(isAdmin && bathroomDuty !== undefined && { bathroomDuty }),
-      ...(isAdmin && dishesDuty !== undefined && { dishesDuty }),
-      ...(isAdmin && trashDuty !== undefined && { trashDuty }),
       ...(isAdmin && utilityShare !== undefined && { utilityShare }),
       ...(isAdmin && rentAmount !== undefined && { rentAmount }),
     },
@@ -110,8 +107,6 @@ export async function DELETE(
   }
 
   await prisma.$transaction([
-    prisma.trashAssignment.deleteMany({ where: { tenantId } }),
-    prisma.dishesAssignment.deleteMany({ where: { tenantId } }),
     prisma.rentReminderLog.deleteMany({ where: { tenantId } }),
     prisma.maintenanceRequest.deleteMany({ where: { tenantId } }),
     prisma.tenant.delete({ where: { id: tenantId } }),

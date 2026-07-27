@@ -22,6 +22,14 @@ const ManagementIcon = () => (
   </svg>
 );
 
+const RotationsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 1 1-3-6.7" />
+    <polyline points="21 3 21 9 15 9" />
+  </svg>
+);
+
 type MenuItem = {
   label: string;
   href: string;
@@ -40,6 +48,7 @@ const menuItems: { title: string; items: MenuItem[] }[] = [
       { icon: "/student.png", label: "Residents",  href: "/list/residents",   visible: ["ADMIN"] },
       { icon: "/setting.png", label: "Utilities",  href: "/utilities",        visible: ["ADMIN", "TENANT"] },
       { svgIcon: InventoryIcon, label: "Inventory",  href: "/kitchen-inventory",visible: ["ADMIN", "TENANT"] },
+      { svgIcon: RotationsIcon, label: "Rotations",  href: "/admin/rotations", visible: ["ADMIN"] },
       { svgIcon: ManagementIcon, label: "Management", href: "/management",    visible: ["ADMIN"] },
     ],
   },

@@ -3,12 +3,18 @@ import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getDishesDutyTenants } from "@/lib/duty-tenants";
+import { getDishesDutyRoster } from "@/lib/duty-tenants";
+import { unitLabel } from "@/lib/rotation-core";
 import {
   getFridaysInMonth,
   generateSchedule,
   mergeWithOverrides,
 } from "@/lib/dishes-schedule";
+
+const unitInclude = {
+  tenant: { select: { id: true, name: true } },
+  team: { include: { members: { include: { tenant: { select: { id: true, name: true } } } } } },
+} as const;
 
 // GET /api/dishes-schedule?year=2026&month=3  (month is 1-indexed)
 export async function GET(req: NextRequest) {
@@ -21,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   const fridays = getFridaysInMonth(year, month);
 
-  const dutyTenants = await getDishesDutyTenants();
+  const roster = await getDishesDutyRoster();
 
   const startOfMonth = new Date(year, month, 1);
   const endOfMonth = new Date(year, month + 1, 0);
@@ -31,17 +37,17 @@ export async function GET(req: NextRequest) {
       isOverride: true,
       date: { gte: startOfMonth, lte: endOfMonth },
     },
-    include: { tenant: { select: { name: true } } },
+    include: { unit: { include: unitInclude } },
   });
 
   const generated = generateSchedule(
     fridays,
-    dutyTenants.map((t) => t.name)
+    roster.map((r) => r.label)
   );
 
   const overrideData = dbOverrides.map((o) => ({
     date: o.date,
-    tenantName: o.tenant.name,
+    tenantName: o.unit ? unitLabel(o.unit) : o.deletedUnitLabel ?? "Deleted User",
   }));
 
   const merged = mergeWithOverrides(generated, overrideData);
@@ -55,7 +61,7 @@ export async function GET(req: NextRequest) {
 
 const putSchema = z.object({
   date: z.string(),
-  tenantId: z.number().int().positive(),
+  unitId: z.number().int().positive(),
 });
 
 // PUT /api/dishes-schedule — admin override a single Friday
@@ -78,32 +84,24 @@ export async function PUT(req: NextRequest) {
 
   const parsed = putSchema.safeParse(await req.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "date and tenantId are required" }, { status: 400 });
+    return NextResponse.json({ error: "date and unitId are required" }, { status: 400 });
   }
-  const { date, tenantId } = parsed.data;
+  const { date, unitId } = parsed.data;
 
   const parsedDate = new Date(date);
   if (parsedDate.getDay() !== 5) {
     return NextResponse.json({ error: "Date must be a Friday" }, { status: 400 });
   }
 
+  const unit = await prisma.rotationUnit.findUnique({ where: { id: unitId } });
+  if (!unit || unit.rotationType !== "TRASH_DISHES") {
+    return NextResponse.json({ error: "unitId must reference a TRASH_DISHES rotation unit" }, { status: 400 });
+  }
+
   const assignment = await prisma.dishesAssignment.upsert({
-    where: {
-      id: (
-        await prisma.dishesAssignment.findFirst({
-          where: {
-            date: parsedDate,
-            isOverride: true,
-          },
-        })
-      )?.id ?? 0,
-    },
-    update: { tenantId, isOverride: true },
-    create: {
-      date: parsedDate,
-      tenantId,
-      isOverride: true,
-    },
+    where: { date: parsedDate },
+    update: { unitId, isOverride: true },
+    create: { date: parsedDate, unitId, isOverride: true },
   });
 
   return NextResponse.json(assignment);

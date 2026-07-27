@@ -19,7 +19,9 @@
       "mcp__playwright__browser_tabs",
       "mcp__playwright__browser_resize",
       "mcp__playwright__browser_take_screenshot",
-      "mcp__playwright__browser_evaluate"
+      "mcp__playwright__browser_evaluate",
+      "Bash(npx vitest *)",
+      "Bash(timeout 120 npm run build)"
     ],
     "additionalDirectories": [
       "/home/lehoa/projects/myMeadow/src/app/api/tenants/[id]"

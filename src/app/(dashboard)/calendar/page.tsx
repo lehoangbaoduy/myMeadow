@@ -2,22 +2,18 @@ import EventCalendar from "@/components/EventCalendar";
 import MobileEventCalendar from "@/components/mobile/MobileEventCalendar";
 import { getCurrentUser } from "@/lib/auth";
 import { getViewMode } from "@/lib/view-mode";
-import { getTrashDutyTenants, getBathroomDutyTenants, getDishesDutyTenants } from "@/lib/duty-tenants";
+import { getTrashDutyRoster, getBathroomDutyRoster, getDishesDutyRoster } from "@/lib/duty-tenants";
 
 const CalendarPage = async () => {
   const currentUser = await getCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
   const isMobile = (await getViewMode()) === "mobile";
 
-  const [trashTenantRows, bathroomTenantRows, dishesDutyTenantRows] = await Promise.all([
-    getTrashDutyTenants(),
-    getBathroomDutyTenants(),
-    getDishesDutyTenants(),
+  const [trashTenants, bathroomTenants, dishesTenants] = await Promise.all([
+    getTrashDutyRoster(),
+    getBathroomDutyRoster(),
+    getDishesDutyRoster(),
   ]);
-
-  const trashTenants = trashTenantRows.map((t) => t.name);
-  const bathroomTenants = bathroomTenantRows.map((t) => t.name);
-  const dishesTenants = dishesDutyTenantRows.map((t) => t.name);
 
   if (isMobile) {
     return (

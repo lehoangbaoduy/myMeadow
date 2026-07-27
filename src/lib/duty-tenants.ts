@@ -1,40 +1,27 @@
-import { prisma } from "@/lib/prisma";
-import { PLACEHOLDER_CLERK_PREFIX } from "@/lib/tenant-placeholder";
+import { getEffectiveRosterLabels, type RosterLabelEntry } from "@/lib/rotation-core";
 
 /**
- * Single source of truth for who's in each rotation (trash/bathroom/dishes).
- * Every site that computes or displays a rotation (calendar tiles, dashboard
- * cards, the reminder sender, the override APIs) must use these same
- * where/orderBy clauses — otherwise the rotation's week-index math can point
- * different screens at different people for the same week.
+ * Single source of truth for who's in each rotation (trash/bathroom/dishes),
+ * resolved from RotationUnit/RotationTeamMember rather than the old per-tenant
+ * duty flags. Trash and dishes intentionally read the SAME roster
+ * (rotationType TRASH_DISHES) — that shared query is what keeps the two
+ * chores in sync (feature #3): advancing one roster advances both.
  *
- * A placeholder resident (reserved room slot, no real login) is kept
- * `isActive: false` so it never receives rent reminders or counts toward
- * "active resident" totals — but if an admin explicitly ticks a duty flag for
- * one, it must still enter that rotation. Hence the isActive-OR-placeholder
- * clause below, rather than a plain `isActive: true` filter.
+ * Placeholder residents (reserved room slots, no real login) never appear
+ * here — RotationUnit membership is admin-managed and placeholders are
+ * excluded from rotations entirely.
  */
-function activeOrPlaceholder() {
-  return { OR: [{ isActive: true }, { user: { clerkId: { startsWith: PLACEHOLDER_CLERK_PREFIX } } }] };
+
+export type { RosterLabelEntry };
+
+export function getTrashDutyRoster(): Promise<RosterLabelEntry[]> {
+  return getEffectiveRosterLabels("TRASH_DISHES");
 }
 
-export function getTrashDutyTenants() {
-  return prisma.tenant.findMany({
-    where: { trashDuty: true, ...activeOrPlaceholder() },
-    orderBy: { id: "asc" },
-  });
+export function getDishesDutyRoster(): Promise<RosterLabelEntry[]> {
+  return getEffectiveRosterLabels("TRASH_DISHES");
 }
 
-export function getBathroomDutyTenants() {
-  return prisma.tenant.findMany({
-    where: { bathroomDuty: true, ...activeOrPlaceholder() },
-    orderBy: { id: "asc" },
-  });
-}
-
-export function getDishesDutyTenants() {
-  return prisma.tenant.findMany({
-    where: { dishesDuty: true, ...activeOrPlaceholder() },
-    orderBy: { id: "asc" },
-  });
+export function getBathroomDutyRoster(): Promise<RosterLabelEntry[]> {
+  return getEffectiveRosterLabels("BATHROOM");
 }

@@ -200,42 +200,6 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                 <label className={labelClass}>Monthly Rent ($)</label>
                 <input type="number" min={0} step={0.01} value={editForm.rentAmount} onChange={updateForm("rentAmount")} placeholder="Leave blank to disable rent reminders" className={inputClass} />
               </div>
-              <div className="flex items-center gap-3 py-1">
-                <input
-                  type="checkbox"
-                  id="bathroomDuty"
-                  checked={editForm.bathroomDuty}
-                  onChange={(e) => setEditForm((p) => ({ ...p, bathroomDuty: e.target.checked }))}
-                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
-                />
-                <label htmlFor="bathroomDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                  Bathroom duty
-                </label>
-              </div>
-              <div className="flex items-center gap-3 py-1">
-                <input
-                  type="checkbox"
-                  id="dishesDuty"
-                  checked={editForm.dishesDuty}
-                  onChange={(e) => setEditForm((p) => ({ ...p, dishesDuty: e.target.checked }))}
-                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
-                />
-                <label htmlFor="dishesDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                  Dish duty
-                </label>
-              </div>
-              <div className="flex items-center gap-3 py-1">
-                <input
-                  type="checkbox"
-                  id="trashDuty"
-                  checked={editForm.trashDuty}
-                  onChange={(e) => setEditForm((p) => ({ ...p, trashDuty: e.target.checked }))}
-                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
-                />
-                <label htmlFor="trashDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                  Trash duty
-                </label>
-              </div>
               {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
               <div className="flex gap-3">
                 <button onClick={handleSaveEdit} disabled={saving}
@@ -286,42 +250,6 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
               <div>
                 <label className={labelClass}>Notes</label>
                 <textarea rows={3} value={addForm.notes} onChange={(e) => setAddForm((p) => ({ ...p, notes: e.target.value }))} className={`${inputClass} resize-none`} />
-              </div>
-              <div className="flex items-center gap-3 py-1">
-                <input
-                  type="checkbox"
-                  id="addBathroomDuty"
-                  checked={addForm.bathroomDuty}
-                  onChange={(e) => setAddForm((p) => ({ ...p, bathroomDuty: e.target.checked }))}
-                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
-                />
-                <label htmlFor="addBathroomDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                  Bathroom duty
-                </label>
-              </div>
-              <div className="flex items-center gap-3 py-1">
-                <input
-                  type="checkbox"
-                  id="addDishesDuty"
-                  checked={addForm.dishesDuty}
-                  onChange={(e) => setAddForm((p) => ({ ...p, dishesDuty: e.target.checked }))}
-                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
-                />
-                <label htmlFor="addDishesDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                  Dish duty
-                </label>
-              </div>
-              <div className="flex items-center gap-3 py-1">
-                <input
-                  type="checkbox"
-                  id="addTrashDuty"
-                  checked={addForm.trashDuty}
-                  onChange={(e) => setAddForm((p) => ({ ...p, trashDuty: e.target.checked }))}
-                  className="w-4 h-4 accent-meadowOrange cursor-pointer"
-                />
-                <label htmlFor="addTrashDuty" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                  Trash duty
-                </label>
               </div>
               {addError && <p className="text-red-500 text-sm">{addError}</p>}
               <div className="flex gap-3">

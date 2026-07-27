@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getTrashDutyTenants } from "@/lib/duty-tenants";
+import { getTrashDutyRoster } from "@/lib/duty-tenants";
+import { unitLabel } from "@/lib/rotation-core";
 import {
   getThursdaysInMonth,
   generateSchedule,
   mergeWithOverrides,
 } from "@/lib/trash-schedule";
+
+const unitInclude = {
+  tenant: { select: { id: true, name: true } },
+  team: { include: { members: { include: { tenant: { select: { id: true, name: true } } } } } },
+} as const;
 
 // GET /api/trash-schedule?year=2026&month=3  (month is 1-indexed)
 export async function GET(req: NextRequest) {
@@ -20,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   const thursdays = getThursdaysInMonth(year, month);
 
-  const trashTenants = await getTrashDutyTenants();
+  const roster = await getTrashDutyRoster();
 
   // Get DB overrides for this window
   const startOfMonth = new Date(year, month, 1);
@@ -31,17 +38,17 @@ export async function GET(req: NextRequest) {
       isOverride: true,
       date: { gte: startOfMonth, lte: endOfMonth },
     },
-    include: { tenant: { select: { name: true } } },
+    include: { unit: { include: unitInclude } },
   });
 
   const generated = generateSchedule(
     thursdays,
-    trashTenants.map((t) => t.name)
+    roster.map((r) => r.label)
   );
 
   const overrideData = dbOverrides.map((o) => ({
     date: o.date,
-    tenantName: o.tenant.name,
+    tenantName: o.unit ? unitLabel(o.unit) : o.deletedUnitLabel ?? "Deleted User",
     hasRecycle: o.isRecycle,
   }));
 
@@ -54,6 +61,12 @@ export async function GET(req: NextRequest) {
     isOverride: e.isOverride,
   })));
 }
+
+const putSchema = z.object({
+  date: z.string(),
+  unitId: z.number().int().positive(),
+  isRecycle: z.boolean().optional(),
+});
 
 // PUT /api/trash-schedule — admin override a single Thursday
 export async function PUT(req: NextRequest) {
@@ -73,36 +86,26 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const body = await req.json();
-  const { date, tenantId, isRecycle } = body;
-
-  if (!date || !tenantId) {
-    return NextResponse.json({ error: "date and tenantId are required" }, { status: 400 });
+  const parsed = putSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "date and unitId are required" }, { status: 400 });
   }
+  const { date, unitId, isRecycle } = parsed.data;
 
   const parsedDate = new Date(date);
   if (parsedDate.getDay() !== 4) {
     return NextResponse.json({ error: "Date must be a Thursday" }, { status: 400 });
   }
 
+  const unit = await prisma.rotationUnit.findUnique({ where: { id: unitId } });
+  if (!unit || unit.rotationType !== "TRASH_DISHES") {
+    return NextResponse.json({ error: "unitId must reference a TRASH_DISHES rotation unit" }, { status: 400 });
+  }
+
   const assignment = await prisma.trashAssignment.upsert({
-    where: {
-      id: (
-        await prisma.trashAssignment.findFirst({
-          where: {
-            date: parsedDate,
-            isOverride: true,
-          },
-        })
-      )?.id ?? 0,
-    },
-    update: { tenantId, isRecycle: isRecycle ?? false, isOverride: true },
-    create: {
-      date: parsedDate,
-      tenantId,
-      isRecycle: isRecycle ?? false,
-      isOverride: true,
-    },
+    where: { date: parsedDate },
+    update: { unitId, isRecycle: isRecycle ?? false, isOverride: true },
+    create: { date: parsedDate, unitId, isRecycle: isRecycle ?? false, isOverride: true },
   });
 
   return NextResponse.json(assignment);

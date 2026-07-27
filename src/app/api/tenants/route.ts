@@ -28,9 +28,6 @@ const createPlaceholderSchema = z.object({
   roomNumber: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   rentAmount: z.number().finite().nonnegative().optional().nullable(),
-  bathroomDuty: z.boolean().optional(),
-  dishesDuty: z.boolean().optional(),
-  trashDuty: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -45,12 +42,13 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid resident data", details: parsed.error.flatten() }, { status: 400 });
   }
-  const { name, gender, dob, roomNumber, notes, rentAmount, bathroomDuty, dishesDuty, trashDuty } = parsed.data;
+  const { name, gender, dob, roomNumber, notes, rentAmount } = parsed.data;
 
   // This endpoint always creates a placeholder resident (a reserved room slot with no
   // real Clerk login). It's kept inactive by default so it never counts as an "active
-  // resident" and never receives rent reminders — but it still enters the trash/bathroom/
-  // dishes rotation whenever the corresponding duty flag is ticked, same as a real tenant.
+  // resident" and never receives rent reminders. Placeholders are excluded from
+  // rotations entirely — admins manage rotation membership separately, and it never
+  // includes reserved-but-unoccupied room slots.
   const placeholderUser = await prisma.user.create({
     data: { clerkId: makePlaceholderClerkId(), role: "TENANT" },
   });
@@ -63,9 +61,6 @@ export async function POST(req: NextRequest) {
       roomNumber: roomNumber ?? null,
       notes: notes ?? null,
       rentAmount: rentAmount ?? null,
-      bathroomDuty: bathroomDuty ?? false,
-      dishesDuty: dishesDuty ?? true,
-      trashDuty: trashDuty ?? false,
       isActive: false,
       userId: placeholderUser.id,
     },

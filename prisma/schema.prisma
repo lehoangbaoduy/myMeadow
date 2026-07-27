@@ -16,6 +16,11 @@ enum Gender {
   FEMALE
 }
 
+enum RotationType {
+  TRASH_DISHES
+  BATHROOM
+}
+
 model User {
   id                   Int            @id @default(autoincrement())
   clerkId              String         @unique
@@ -40,19 +45,75 @@ model Tenant {
   email               String?
   roomNumber          String?
   notes               String?
-  bathroomDuty        Boolean              @default(false)
-  dishesDuty          Boolean              @default(true)
-  trashDuty           Boolean              @default(false)
   utilityShare        Float                @default(1)
   rentAmount          Float?
   userId              Int                  @unique
   user                User                 @relation(fields: [userId], references: [id])
-  trashAssignments    TrashAssignment[]
-  dishesAssignments   DishesAssignment[]
   maintenanceRequests MaintenanceRequest[]
   rentReminderLogs    RentReminderLog[]
+  rotationUnits       RotationUnit[]
+  rotationTeamMembers RotationTeamMember[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+}
+
+model RotationTeam {
+  id           Int                  @id @default(autoincrement())
+  rotationType RotationType
+  name         String?
+  members      RotationTeamMember[]
+  unit         RotationUnit?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model RotationTeamMember {
+  id           Int          @id @default(autoincrement())
+  teamId       Int
+  team         RotationTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  rotationType RotationType
+  tenantId     Int
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  addedAt      DateTime     @default(now())
+
+  @@unique([rotationType, tenantId])
+  @@index([teamId])
+}
+
+/// The authoritative, ordered roster for a rotation type. Each slot is
+/// EITHER a solo tenant OR a team (never both) — see rotation-core.ts for
+/// the resolver that reads this to answer "who has position P on date D".
+model RotationUnit {
+  id           Int                @id @default(autoincrement())
+  rotationType RotationType
+  order        Int
+  tenantId     Int?
+  tenant       Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  teamId       Int?               @unique
+  team         RotationTeam?      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  trashAssignments    TrashAssignment[]
+  dishesAssignments   DishesAssignment[]
+  bathroomAssignments BathroomAssignment[]
+
+  @@unique([rotationType, order])
+  @@unique([rotationType, tenantId])
+}
+
+model RotationShift {
+  id                Int          @id @default(autoincrement())
+  rotationType      RotationType
+  effectiveDate     DateTime
+  offsetPositions   Int
+  actorUserId       Int
+  reason            String?
+  previousUnitLabel String
+  newUnitLabel      String
+  createdAt         DateTime     @default(now())
+
+  @@index([rotationType, effectiveDate])
 }
 
 model UtilityBill {
@@ -104,24 +165,58 @@ model MaintenanceRequest {
 }
 
 model TrashAssignment {
-  id         Int      @id @default(autoincrement())
-  date       DateTime
-  tenantId   Int
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
-  isRecycle  Boolean  @default(false)
-  isOverride Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                Int          @id @default(autoincrement())
+  date              DateTime
+  unitId            Int?
+  unit              RotationUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  deletedUnitLabel  String?
+  isRecycle         Boolean      @default(false)
+  isOverride        Boolean      @default(false)
+  status            String       @default("SCHEDULED")
+  completedAt       DateTime?
+  completedByUserId Int?
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([date])
+  @@index([unitId])
 }
 
 model DishesAssignment {
-  id         Int      @id @default(autoincrement())
-  date       DateTime
-  tenantId   Int
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
-  isOverride Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                Int          @id @default(autoincrement())
+  date              DateTime
+  unitId            Int?
+  unit              RotationUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  deletedUnitLabel  String?
+  isOverride        Boolean      @default(false)
+  status            String       @default("SCHEDULED")
+  completedAt       DateTime?
+  completedByUserId Int?
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([date])
+  @@index([unitId])
+}
+
+model BathroomAssignment {
+  id                Int          @id @default(autoincrement())
+  date              DateTime
+  unitId            Int?
+  unit              RotationUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  deletedUnitLabel  String?
+  isOverride        Boolean      @default(false)
+  status            String       @default("SCHEDULED")
+  completedAt       DateTime?
+  completedByUserId Int?
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([date])
+  @@index([unitId])
 }
 
 model RentReminderLog {

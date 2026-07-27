@@ -32,6 +32,13 @@ const ManagementIcon = () => (
   </svg>
 );
 
+const RotationsIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 1 1-3-6.7" />
+    <polyline points="21 3 21 9 15 9" />
+  </svg>
+);
+
 const MoreIcon = () => (
   <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor">
     <circle cx="5" cy="12" r="1.8" />
@@ -67,6 +74,7 @@ export default function BottomTabBar({ role }: Props) {
     ...(role === "ADMIN"
       ? [
           { label: "Residents", href: "/list/residents", icon: <Image src="/student.png" alt="" width={20} height={20} /> },
+          { label: "Rotations", href: "/admin/rotations", icon: <RotationsIcon /> },
           { label: "Management", href: "/management", icon: <ManagementIcon /> },
         ]
       : []),

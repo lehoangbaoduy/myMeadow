@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { getWeekIndex, getThursdayOfWeek } from "@/lib/trash-schedule";
-import { getWeekIndex as getDishesWeekIndex, getFridayOfWeek } from "@/lib/dishes-schedule";
-import { getTrashDutyTenants, getBathroomDutyTenants, getDishesDutyTenants } from "@/lib/duty-tenants";
+import { getThursdayOfWeek } from "@/lib/trash-schedule";
+import { getFridayOfWeek } from "@/lib/dishes-schedule";
+import { resolveUnitTenants } from "@/lib/rotation-core";
 import { Resend } from "resend";
 
 let resend: Resend | null = null;
@@ -10,11 +10,8 @@ function getResendClient(): Resend {
   return resend;
 }
 
-function pickByWeekIndex<T>(list: T[], weekIdx: number): T {
-  return list[((weekIdx % list.length) + list.length) % list.length];
-}
-
 interface DeliverableTenant {
+  name: string;
   userId: number;
   phone: string | null;
   email: string | null;
@@ -70,47 +67,59 @@ async function deliverReminder(
   return warnings;
 }
 
+/** Builds the reminder content for one tenant/team member. Personalized per-recipient, even when the turn belongs to a team. */
+function buildContent(type: "trash" | "bathroom" | "dishes", name: string, dateStr: string): { content: string; subject: string } {
+  if (type === "trash") {
+    return {
+      content: `Hey ${name}! 👋 Just a friendly reminder — it's your turn to take out the trash this Thursday (${dateStr}). Please bring the bins to the curb by 7 PM. Thank you for keeping our home clean! 🚮`,
+      subject: `🚮 Trash Reminder — ${dateStr}`,
+    };
+  }
+  if (type === "bathroom") {
+    return {
+      content: `Hey ${name}! 🛁 This is your bathroom cleaning turn. Please give the bathroom a thorough scrub (toilet, sink, mirror, floor). Your effort keeps our home fresh — thank you! 🛁`,
+      subject: `🛁 Bathroom Cleaning Reminder`,
+    };
+  }
+  return {
+    content: `Hey ${name}! 🍽️ Just a friendly reminder — it's your turn on dish duty this week (${dateStr}). Please keep the sink and drying rack clear. Thank you for keeping our kitchen tidy! 🍽️`,
+    subject: `🍽️ Dish Duty Reminder — ${dateStr}`,
+  };
+}
+
 export async function sendReminder(type: "trash" | "bathroom" | "dishes"): Promise<{
   notified: string;
   warnings: string[];
 }> {
   const today = new Date();
 
-  let tenant;
-  let content: string;
-  let subject: string;
+  let tenants: DeliverableTenant[];
+  let dateStr: string;
 
   if (type === "trash") {
     const thursday = getThursdayOfWeek(today);
-    const weekIdx = getWeekIndex(thursday);
-    const trashTenants = await getTrashDutyTenants();
-    if (trashTenants.length === 0) throw new Error("No tenants with trash duty found");
-    tenant = pickByWeekIndex(trashTenants, weekIdx);
-    const dateStr = thursday.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-    content = `Hey ${tenant.name}! 👋 Just a friendly reminder — it's your turn to take out the trash this Thursday (${dateStr}). Please bring the bins to the curb by 7 PM. Thank you for keeping our home clean! �`;
-    subject = `� Trash Reminder — ${dateStr}`;
+    dateStr = thursday.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    tenants = await resolveUnitTenants("TRASH_DISHES", thursday);
+    if (tenants.length === 0) throw new Error("No one is currently assigned to the trash/dishes rotation");
   } else if (type === "bathroom") {
-    const thursday = getThursdayOfWeek(today);
-    const weekIdx = getWeekIndex(thursday);
-    const bathroomTenants = await getBathroomDutyTenants();
-    if (bathroomTenants.length === 0) throw new Error("No tenants with bathroom duty found");
-    tenant = pickByWeekIndex(bathroomTenants, Math.floor(weekIdx / 2));
-    content = `Hey ${tenant.name}! 🛁 This is your 2-week bathroom cleaning rotation. Please give the bathroom a thorough scrub (toilet, sink, mirror, floor) before Sunday. Your effort keeps our home fresh — thank you! 🛁`;
-    subject = `🛁 Bathroom Cleaning Reminder`;
+    dateStr = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    tenants = await resolveUnitTenants("BATHROOM", today);
+    if (tenants.length === 0) throw new Error("No one is currently assigned to the bathroom rotation");
   } else {
     const friday = getFridayOfWeek(today);
-    const weekIdx = getDishesWeekIndex(friday);
-    const dishesDutyTenants = await getDishesDutyTenants();
-    if (dishesDutyTenants.length === 0) throw new Error("No residents on dish duty");
-    tenant = pickByWeekIndex(dishesDutyTenants, weekIdx);
-    const dateStr = friday.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-    content = `Hey ${tenant.name}! 🍽️ Just a friendly reminder — it's your turn on dish duty this week (${dateStr}). Please keep the sink and drying rack clear. Thank you for keeping our kitchen tidy! 🍽️`;
-    subject = `🍽️ Dish Duty Reminder — ${dateStr}`;
+    dateStr = friday.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    tenants = await resolveUnitTenants("TRASH_DISHES", friday);
+    if (tenants.length === 0) throw new Error("No one is currently assigned to the trash/dishes rotation");
   }
 
-  const warnings = await deliverReminder(tenant, content, subject);
+  const warnings: string[] = [];
+  for (const tenant of tenants) {
+    const { content, subject } = buildContent(type, tenant.name, dateStr);
+    const tenantWarnings = await deliverReminder(tenant, content, subject);
+    warnings.push(...tenantWarnings.map((w) => `${tenant.name}: ${w}`));
+  }
 
-  return { notified: tenant.name, warnings };
+  return { notified: tenants.map((t) => t.name).join(", "), warnings };
 }
 
 function daysInMonth(year: number, month: number): number {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CUR_MONTH, CUR_YEAR, fmtLabel, type UtilityBillRow } from "@/components/DashboardContent";
 import { getThursdayOfWeek } from "@/lib/trash-schedule";
 import { getTrashAssignment, getBathroomAssignment } from "@/lib/rotation-assignments";
+import type { RosterLabelEntry } from "@/lib/duty-tenants";
 import MobileCard from "./MobileCard";
 
 interface RunOutItem {
@@ -13,8 +14,8 @@ interface RunOutItem {
 
 interface Props {
   bills: UtilityBillRow[];
-  trashTenants: string[];
-  bathroomTenants: string[];
+  trashTenants: RosterLabelEntry[];
+  bathroomTenants: RosterLabelEntry[];
   runOutItems: RunOutItem[];
 }
 
@@ -28,9 +29,10 @@ const UTIL_ROWS: { key: keyof UtilityBillRow; label: string; icon: string }[] = 
 export default function MobileDashboardContent({ bills, trashTenants, bathroomTenants, runOutItems }: Props) {
   const curMonthBill = bills.find((b) => b.month === CUR_MONTH && b.year === CUR_YEAR) ?? null;
 
-  const thisThursday = getThursdayOfWeek(new Date());
+  const today = new Date();
+  const thisThursday = getThursdayOfWeek(today);
   const trashAssignment = getTrashAssignment(thisThursday, trashTenants);
-  const bathroomAssignee = getBathroomAssignment(thisThursday, bathroomTenants);
+  const bathroomAssignee = getBathroomAssignment(today, bathroomTenants);
   const thursdayLabel = thisThursday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
@@ -105,7 +107,7 @@ export default function MobileDashboardContent({ bills, trashTenants, bathroomTe
       {/* Card 4 — Bathroom schedule, this week */}
       <MobileCard>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🛁 Bathroom — This Week</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🛁 Bathroom — Current Turn</h2>
         </div>
         <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{bathroomAssignee}</p>
       </MobileCard>
