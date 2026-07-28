@@ -42,10 +42,35 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { userId: clerkId } = await auth();
+  if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const caller = await prisma.user.findUnique({
+    where: { clerkId },
+    include: { tenant: { select: { name: true } } },
+  });
+  if (!caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await req.json();
+  const runOutEntry = await prisma.inventoryRunOut.findUnique({ where: { id: Number(id) } });
+  if (!runOutEntry) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Resolving means the item has been restocked — reset it to full and log
+  // the restock, same as any other level increase.
+  const item = await prisma.inventoryItem.findUnique({ where: { name: runOutEntry.itemName } });
+  if (item && item.level < 1) {
+    await prisma.inventoryItem.update({ where: { id: item.id }, data: { level: 1 } });
+    await prisma.inventoryLevelLog.create({
+      data: {
+        itemId: item.id,
+        changedByUserId: caller.id,
+        changedByName: caller.tenant?.name ?? "Admin",
+        previousLevel: item.level,
+        newLevel: 1,
+      },
+    });
+  }
+
   const updated = await prisma.inventoryRunOut.update({
     where: { id: Number(id) },
     data: { resolved: true },

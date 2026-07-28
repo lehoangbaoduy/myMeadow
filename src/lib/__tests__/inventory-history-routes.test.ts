@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { GET as listGet } from "@/app/api/inventory/route";
 import { PATCH as itemPatch } from "@/app/api/inventory/[id]/route";
 import { GET as historyGet } from "@/app/api/inventory/[id]/history/route";
+import { PATCH as runOutPatch } from "@/app/api/inventory/runout/route";
 
 /**
  * The kitchen/household inventory is shared unconditionally with everyone
@@ -125,5 +126,76 @@ describe("kitchen inventory: restock attribution + history", () => {
     expect(entries).toHaveLength(2);
     expect(entries[0].changedByName).toBe("KInvTenantB");
     expect(entries[1].changedByName).toBe("KInvTenantA");
+  });
+});
+
+describe("kitchen inventory: resolving a run-out restocks the item", () => {
+  it("resets the item to 100% and logs the resolver as the filler", async () => {
+    await prisma.inventoryItem.deleteMany({ where: { name: "Test Runout Item" } });
+    const item = await prisma.inventoryItem.create({
+      data: { name: "Test Runout Item", category: "Custom", isCustom: true, level: 0.1 },
+    });
+    const runOutEntry = await prisma.inventoryRunOut.create({
+      data: { itemName: item.name },
+    });
+
+    mockAuthAs(TENANT_A_CLERK_ID);
+    const req = new NextRequest("http://localhost/api/inventory/runout", {
+      method: "PATCH",
+      body: JSON.stringify({ id: runOutEntry.id }),
+    });
+    const res = await runOutPatch(req);
+    expect(res.status).toBe(200);
+    expect((await res.json()).resolved).toBe(true);
+
+    const updatedItem = await prisma.inventoryItem.findUnique({ where: { id: item.id } });
+    expect(updatedItem?.level).toBe(1);
+
+    const historyReq = new NextRequest(`http://localhost/api/inventory/${item.id}/history`);
+    const historyRes = await historyGet(historyReq, { params: { id: String(item.id) } });
+    const entries: { changedByName: string; previousLevel: number; newLevel: number }[] = await historyRes.json();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ changedByName: "KInvTenantA", previousLevel: 0.1, newLevel: 1 });
+  });
+
+  it("does not double-log when the item was already at 100% before resolving", async () => {
+    await prisma.inventoryItem.deleteMany({ where: { name: "Test Runout Already Full" } });
+    const item = await prisma.inventoryItem.create({
+      data: { name: "Test Runout Already Full", category: "Custom", isCustom: true, level: 1 },
+    });
+    const runOutEntry = await prisma.inventoryRunOut.create({
+      data: { itemName: item.name },
+    });
+
+    mockAuthAs(TENANT_A_CLERK_ID);
+    const req = new NextRequest("http://localhost/api/inventory/runout", {
+      method: "PATCH",
+      body: JSON.stringify({ id: runOutEntry.id }),
+    });
+    await runOutPatch(req);
+
+    const historyReq = new NextRequest(`http://localhost/api/inventory/${item.id}/history`);
+    const historyRes = await historyGet(historyReq, { params: { id: String(item.id) } });
+    expect(await historyRes.json()).toHaveLength(0);
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    mockAuthAs(null);
+    const req = new NextRequest("http://localhost/api/inventory/runout", {
+      method: "PATCH",
+      body: JSON.stringify({ id: 999999 }),
+    });
+    const res = await runOutPatch(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 for a nonexistent run-out entry", async () => {
+    mockAuthAs(TENANT_A_CLERK_ID);
+    const req = new NextRequest("http://localhost/api/inventory/runout", {
+      method: "PATCH",
+      body: JSON.stringify({ id: 999999 }),
+    });
+    const res = await runOutPatch(req);
+    expect(res.status).toBe(404);
   });
 });
