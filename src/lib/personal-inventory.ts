@@ -7,20 +7,21 @@ export interface PersonalInventoryItem {
   description: string | null;
   expirationDate: string | null;
   lowStockThreshold: number | null;
+}
+
+export interface PersonalInventoryList {
+  id: number;
+  name: string;
+  items: PersonalInventoryItem[];
   sharedWith: { tenantId: number; name: string }[];
 }
 
-export interface SharedPersonalInventoryItem {
+export interface SharedPersonalInventoryList {
   id: number;
   name: string;
-  quantity: number | null;
-  unit: string | null;
-  category: string | null;
-  description: string | null;
-  expirationDate: string | null;
-  lowStockThreshold: number | null;
   ownerTenantId: number;
   ownerName: string;
+  items: PersonalInventoryItem[];
 }
 
 export type PersonalInventoryItemInput = {

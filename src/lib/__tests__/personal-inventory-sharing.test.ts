@@ -7,15 +7,17 @@ vi.mock("@clerk/nextjs/server", () => ({
 
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { GET as listGet, POST as listPost } from "@/app/api/inventory-personal/route";
+import { GET as listGet, POST as itemPost } from "@/app/api/inventory-personal/route";
 import { PATCH as itemPatch } from "@/app/api/inventory-personal/[id]/route";
-import { PUT as sharePut } from "@/app/api/inventory-personal/[id]/share/route";
+import { POST as listPost } from "@/app/api/inventory-personal/lists/route";
+import { PUT as listSharePut } from "@/app/api/inventory-personal/lists/[id]/share/route";
 import { GET as roommatesGet } from "@/app/api/inventory-personal/roommates/route";
 
 /**
- * Sharing is a read-only visibility grant: the owner picks which residents
- * can see an item, but only the owner (or an admin) can ever edit or delete
- * it, or change who it's shared with.
+ * Sharing is a read-only visibility grant at the LIST level: the owner picks
+ * which residents can see an entire list — and everything in it, including
+ * items added later — but only the owner (or an admin) can ever edit,
+ * delete, or change who a list is shared with.
  */
 
 const OWNER_CLERK_ID = "test_pis_owner";
@@ -24,6 +26,7 @@ const OUTSIDER_CLERK_ID = "test_pis_outsider";
 
 let ownerTenantId: number;
 let viewerTenantId: number;
+let listId: number;
 let itemId: number;
 
 function mockAuthAs(clerkId: string | null) {
@@ -31,7 +34,7 @@ function mockAuthAs(clerkId: string | null) {
 }
 
 beforeAll(async () => {
-  await prisma.personalInventoryItem.deleteMany({ where: { name: "Shared Snacks" } });
+  await prisma.personalInventoryList.deleteMany({ where: { name: "Shared Snacks List" } });
 
   for (const [clerkId, name] of [
     [OWNER_CLERK_ID, "PISOwner"],
@@ -51,15 +54,21 @@ beforeAll(async () => {
   }
 
   mockAuthAs(OWNER_CLERK_ID);
+  const listReq = new NextRequest("http://localhost/api/inventory-personal/lists", {
+    method: "POST",
+    body: JSON.stringify({ name: "Shared Snacks List" }),
+  });
+  listId = (await (await listPost(listReq)).json()).id;
+
   const createReq = new NextRequest("http://localhost/api/inventory-personal", {
     method: "POST",
-    body: JSON.stringify({ name: "Shared Snacks", quantity: 3, unit: "bags" }),
+    body: JSON.stringify({ listId, name: "Shared Snacks", quantity: 3, unit: "bags" }),
   });
-  const created = await (await listPost(createReq)).json();
+  const created = await (await itemPost(createReq)).json();
   itemId = created.id;
 });
 
-describe("personal inventory sharing", () => {
+describe("personal inventory sharing (list-level)", () => {
   it("roommates endpoint excludes the caller and includes other active residents", async () => {
     mockAuthAs(OWNER_CLERK_ID);
     const res = await roommatesGet();
@@ -68,33 +77,50 @@ describe("personal inventory sharing", () => {
     expect(roommates.some((r) => r.id === viewerTenantId)).toBe(true);
   });
 
-  it("owner shares the item with the viewer", async () => {
+  it("owner shares the list with the viewer", async () => {
     mockAuthAs(OWNER_CLERK_ID);
-    const req = new NextRequest(`http://localhost/api/inventory-personal/${itemId}/share`, {
+    const req = new NextRequest(`http://localhost/api/inventory-personal/lists/${listId}/share`, {
       method: "PUT",
       body: JSON.stringify({ tenantIds: [viewerTenantId] }),
     });
-    const res = await sharePut(req, { params: { id: String(itemId) } });
+    const res = await listSharePut(req, { params: { id: String(listId) } });
     expect(res.status).toBe(200);
     const shares = await res.json();
     expect(shares).toEqual([{ tenantId: viewerTenantId, name: "PISViewer" }]);
   });
 
-  it("the viewer now sees the item under sharedWithMe", async () => {
+  it("the viewer now sees the list and its item under sharedLists", async () => {
     mockAuthAs(VIEWER_CLERK_ID);
     const req = new NextRequest("http://localhost/api/inventory-personal");
     const body = await (await listGet(req)).json();
-    expect(body.sharedWithMe.some((i: { id: number }) => i.id === itemId)).toBe(true);
+    const sharedList = body.sharedLists.find((l: { id: number }) => l.id === listId);
+    expect(sharedList).toBeDefined();
+    expect(sharedList.items.some((i: { id: number }) => i.id === itemId)).toBe(true);
   });
 
-  it("an outsider (not shared with) does not see the item under sharedWithMe", async () => {
+  it("adding a new item to an already-shared list makes it visible to the recipient without a new share action", async () => {
+    mockAuthAs(OWNER_CLERK_ID);
+    const addReq = new NextRequest("http://localhost/api/inventory-personal", {
+      method: "POST",
+      body: JSON.stringify({ listId, name: "Second Shared Item", quantity: 1, unit: "bag" }),
+    });
+    const addedItem = await (await itemPost(addReq)).json();
+
+    mockAuthAs(VIEWER_CLERK_ID);
+    const req = new NextRequest("http://localhost/api/inventory-personal");
+    const body = await (await listGet(req)).json();
+    const sharedList = body.sharedLists.find((l: { id: number }) => l.id === listId);
+    expect(sharedList.items.some((i: { id: number }) => i.id === addedItem.id)).toBe(true);
+  });
+
+  it("an outsider (not shared with) does not see the list under sharedLists", async () => {
     mockAuthAs(OUTSIDER_CLERK_ID);
     const req = new NextRequest("http://localhost/api/inventory-personal");
     const body = await (await listGet(req)).json();
-    expect(body.sharedWithMe.some((i: { id: number }) => i.id === itemId)).toBe(false);
+    expect(body.sharedLists.some((l: { id: number }) => l.id === listId)).toBe(false);
   });
 
-  it("the viewer cannot PATCH the shared item — sharing is read-only (403)", async () => {
+  it("the viewer cannot PATCH an item in the shared list — sharing is read-only (403)", async () => {
     mockAuthAs(VIEWER_CLERK_ID);
     const req = new NextRequest(`http://localhost/api/inventory-personal/${itemId}`, {
       method: "PATCH",
@@ -104,49 +130,49 @@ describe("personal inventory sharing", () => {
     expect(res.status).toBe(403);
   });
 
-  it("the viewer cannot change who the item is shared with (403)", async () => {
+  it("the viewer cannot change who the list is shared with (403)", async () => {
     mockAuthAs(VIEWER_CLERK_ID);
-    const req = new NextRequest(`http://localhost/api/inventory-personal/${itemId}/share`, {
+    const req = new NextRequest(`http://localhost/api/inventory-personal/lists/${listId}/share`, {
       method: "PUT",
       body: JSON.stringify({ tenantIds: [] }),
     });
-    const res = await sharePut(req, { params: { id: String(itemId) } });
+    const res = await listSharePut(req, { params: { id: String(listId) } });
     expect(res.status).toBe(403);
   });
 
   it("owner can revoke a share by omitting the tenantId", async () => {
     mockAuthAs(OWNER_CLERK_ID);
-    const req = new NextRequest(`http://localhost/api/inventory-personal/${itemId}/share`, {
+    const req = new NextRequest(`http://localhost/api/inventory-personal/lists/${listId}/share`, {
       method: "PUT",
       body: JSON.stringify({ tenantIds: [] }),
     });
-    const res = await sharePut(req, { params: { id: String(itemId) } });
+    const res = await listSharePut(req, { params: { id: String(listId) } });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
 
     mockAuthAs(VIEWER_CLERK_ID);
     const listReq = new NextRequest("http://localhost/api/inventory-personal");
     const body = await (await listGet(listReq)).json();
-    expect(body.sharedWithMe.some((i: { id: number }) => i.id === itemId)).toBe(false);
+    expect(body.sharedLists.some((l: { id: number }) => l.id === listId)).toBe(false);
   });
 
-  it("rejects sharing an item with its own owner (400)", async () => {
+  it("rejects sharing a list with its own owner (400)", async () => {
     mockAuthAs(OWNER_CLERK_ID);
-    const req = new NextRequest(`http://localhost/api/inventory-personal/${itemId}/share`, {
+    const req = new NextRequest(`http://localhost/api/inventory-personal/lists/${listId}/share`, {
       method: "PUT",
       body: JSON.stringify({ tenantIds: [ownerTenantId] }),
     });
-    const res = await sharePut(req, { params: { id: String(itemId) } });
+    const res = await listSharePut(req, { params: { id: String(listId) } });
     expect(res.status).toBe(400);
   });
 
   it("rejects sharing with a nonexistent tenantId (400)", async () => {
     mockAuthAs(OWNER_CLERK_ID);
-    const req = new NextRequest(`http://localhost/api/inventory-personal/${itemId}/share`, {
+    const req = new NextRequest(`http://localhost/api/inventory-personal/lists/${listId}/share`, {
       method: "PUT",
       body: JSON.stringify({ tenantIds: [999999] }),
     });
-    const res = await sharePut(req, { params: { id: String(itemId) } });
+    const res = await listSharePut(req, { params: { id: String(listId) } });
     expect(res.status).toBe(400);
   });
 });

@@ -2,22 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { authorizeItemWrite } from "@/lib/personal-inventory-authz";
+import { authorizeListWrite } from "@/lib/personal-inventory-authz";
 import { isPlaceholderClerkId } from "@/lib/tenant-placeholder";
 
 const shareSchema = z.object({
   tenantIds: z.array(z.number().int()),
 });
 
-/** Replaces the full share list for an item with the given set of tenantIds. */
+/**
+ * Replaces the full share list for a list with the given set of tenantIds.
+ * Sharing a list grants read-only visibility into every item currently in
+ * it, and any item added to it later — resolved at read time, not copied.
+ */
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }): Promise<NextResponse> {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const itemId = Number(params.id);
-  const authz = await authorizeItemWrite(userId, itemId);
+  const listId = Number(params.id);
+  const authz = await authorizeListWrite(userId, listId);
   if (authz instanceof NextResponse) return authz;
-  const { item } = authz;
+  const { list } = authz;
 
   const parsed = shareSchema.safeParse(await req.json());
   if (!parsed.success) {
@@ -25,8 +29,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   const tenantIds = Array.from(new Set(parsed.data.tenantIds));
-  if (tenantIds.includes(item.tenantId)) {
-    return NextResponse.json({ error: "Cannot share an item with its own owner" }, { status: 400 });
+  if (tenantIds.includes(list.tenantId)) {
+    return NextResponse.json({ error: "Cannot share a list with its own owner" }, { status: 400 });
   }
 
   if (tenantIds.length > 0) {
@@ -48,18 +52,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   await prisma.$transaction([
-    prisma.personalInventoryShare.deleteMany({ where: { itemId, tenantId: { notIn: tenantIds } } }),
+    prisma.personalInventoryListShare.deleteMany({ where: { listId, tenantId: { notIn: tenantIds } } }),
     ...tenantIds.map((tenantId) =>
-      prisma.personalInventoryShare.upsert({
-        where: { itemId_tenantId: { itemId, tenantId } },
-        create: { itemId, tenantId },
+      prisma.personalInventoryListShare.upsert({
+        where: { listId_tenantId: { listId, tenantId } },
+        create: { listId, tenantId },
         update: {},
       })
     ),
   ]);
 
-  const shares = await prisma.personalInventoryShare.findMany({
-    where: { itemId },
+  const shares = await prisma.personalInventoryListShare.findMany({
+    where: { listId },
     include: { tenant: { select: { id: true, name: true } } },
   });
 

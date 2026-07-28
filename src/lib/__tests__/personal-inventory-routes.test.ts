@@ -7,16 +7,16 @@ vi.mock("@clerk/nextjs/server", () => ({
 
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { GET as listGet, POST as listPost } from "@/app/api/inventory-personal/route";
+import { GET as listGet, POST as itemPost } from "@/app/api/inventory-personal/route";
 import { PATCH as itemPatch, DELETE as itemDelete } from "@/app/api/inventory-personal/[id]/route";
+import { POST as listPost } from "@/app/api/inventory-personal/lists/route";
 
 /**
  * Integration tests against a real local SQLite database (see
  * rotation-admin-routes.test.ts for the rationale). Focus here is the
- * ownership check on [id]/route.ts — unlike the kitchen inventory (shared
- * unconditionally with everyone), personal inventory items are private by
- * default; visibility to another resident is opt-in via PersonalInventoryShare
- * and never grants write access (see personal-inventory-sharing.test.ts).
+ * ownership check on items and lists — items always live inside exactly one
+ * list, and ownership is derived from the list's tenantId, not stored on the
+ * item itself (see personal-inventory-sharing.test.ts for list-level sharing).
  */
 
 const ADMIN_CLERK_ID = "test_pi_admin";
@@ -25,6 +25,8 @@ const TENANT_B_CLERK_ID = "test_pi_tenant_b";
 
 let tenantAId: number;
 let tenantBId: number;
+let listAId: number;
+let listBId: number;
 
 function mockAuthAs(clerkId: string | null) {
   vi.mocked(auth).mockResolvedValue({ userId: clerkId } as unknown as Awaited<ReturnType<typeof auth>>);
@@ -32,6 +34,7 @@ function mockAuthAs(clerkId: string | null) {
 
 beforeAll(async () => {
   await prisma.personalInventoryItem.deleteMany({});
+  await prisma.personalInventoryList.deleteMany({});
 
   let adminUser = await prisma.user.findUnique({ where: { clerkId: ADMIN_CLERK_ID } });
   if (!adminUser) {
@@ -53,6 +56,20 @@ beforeAll(async () => {
     if (clerkId === TENANT_A_CLERK_ID) tenantAId = tenant.id;
     else tenantBId = tenant.id;
   }
+
+  mockAuthAs(TENANT_A_CLERK_ID);
+  const listAReq = new NextRequest("http://localhost/api/inventory-personal/lists", {
+    method: "POST",
+    body: JSON.stringify({ name: "Tenant A List" }),
+  });
+  listAId = (await (await listPost(listAReq)).json()).id;
+
+  mockAuthAs(TENANT_B_CLERK_ID);
+  const listBReq = new NextRequest("http://localhost/api/inventory-personal/lists", {
+    method: "POST",
+    body: JSON.stringify({ name: "Tenant B List" }),
+  });
+  listBId = (await (await listPost(listBReq)).json()).id;
 });
 
 describe("personal inventory: ownership", () => {
@@ -63,36 +80,47 @@ describe("personal inventory: ownership", () => {
     expect(res.status).toBe(401);
   });
 
-  it("tenant A can create an item for themselves", async () => {
+  it("tenant A can create an item in their own list", async () => {
     mockAuthAs(TENANT_A_CLERK_ID);
     const req = new NextRequest("http://localhost/api/inventory-personal", {
       method: "POST",
-      body: JSON.stringify({ name: "Protein Powder", quantity: 2, unit: "tubs" }),
+      body: JSON.stringify({ listId: listAId, name: "Protein Powder", quantity: 2, unit: "tubs" }),
     });
-    const res = await listPost(req);
+    const res = await itemPost(req);
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.name).toBe("Protein Powder");
   });
 
-  it("tenant A's list GET only returns their own items", async () => {
+  it("tenant A cannot create an item in tenant B's list (403)", async () => {
+    mockAuthAs(TENANT_A_CLERK_ID);
+    const req = new NextRequest("http://localhost/api/inventory-personal", {
+      method: "POST",
+      body: JSON.stringify({ listId: listBId, name: "Sneaky Item" }),
+    });
+    const res = await itemPost(req);
+    expect(res.status).toBe(403);
+  });
+
+  it("tenant A's list GET only returns their own lists/items", async () => {
     mockAuthAs(TENANT_B_CLERK_ID);
     const reqB = new NextRequest("http://localhost/api/inventory-personal", {
       method: "POST",
-      body: JSON.stringify({ name: "Vitamins", quantity: 1, unit: "bottle" }),
+      body: JSON.stringify({ listId: listBId, name: "Vitamins", quantity: 1, unit: "bottle" }),
     });
-    await listPost(reqB);
+    await itemPost(reqB);
 
     mockAuthAs(TENANT_A_CLERK_ID);
     const req = new NextRequest("http://localhost/api/inventory-personal");
     const res = await listGet(req);
     const body = await res.json();
-    expect(body.own.every((i: { name: string }) => i.name !== "Vitamins")).toBe(true);
+    const allItemNames = body.ownLists.flatMap((l: { items: { name: string }[] }) => l.items.map((i) => i.name));
+    expect(allItemNames).not.toContain("Vitamins");
   });
 
   it("tenant B cannot PATCH tenant A's item (403)", async () => {
     mockAuthAs(TENANT_A_CLERK_ID);
-    const itemRes = await prisma.personalInventoryItem.findFirst({ where: { tenantId: tenantAId, name: "Protein Powder" } });
+    const itemRes = await prisma.personalInventoryItem.findFirst({ where: { listId: listAId, name: "Protein Powder" } });
     expect(itemRes).not.toBeNull();
 
     mockAuthAs(TENANT_B_CLERK_ID);
@@ -105,7 +133,7 @@ describe("personal inventory: ownership", () => {
   });
 
   it("tenant B cannot DELETE tenant A's item (403)", async () => {
-    const itemRes = await prisma.personalInventoryItem.findFirst({ where: { tenantId: tenantAId, name: "Protein Powder" } });
+    const itemRes = await prisma.personalInventoryItem.findFirst({ where: { listId: listAId, name: "Protein Powder" } });
     mockAuthAs(TENANT_B_CLERK_ID);
     const req = new NextRequest(`http://localhost/api/inventory-personal/${itemRes!.id}`, { method: "DELETE" });
     const res = await itemDelete(req, { params: { id: String(itemRes!.id) } });
@@ -116,7 +144,7 @@ describe("personal inventory: ownership", () => {
   });
 
   it("owner (tenant A) can PATCH their own item", async () => {
-    const itemRes = await prisma.personalInventoryItem.findFirst({ where: { tenantId: tenantAId, name: "Protein Powder" } });
+    const itemRes = await prisma.personalInventoryItem.findFirst({ where: { listId: listAId, name: "Protein Powder" } });
     mockAuthAs(TENANT_A_CLERK_ID);
     const req = new NextRequest(`http://localhost/api/inventory-personal/${itemRes!.id}`, {
       method: "PATCH",
@@ -129,7 +157,7 @@ describe("personal inventory: ownership", () => {
   });
 
   it("admin can PATCH any tenant's item", async () => {
-    const itemRes = await prisma.personalInventoryItem.findFirst({ where: { tenantId: tenantBId, name: "Vitamins" } });
+    const itemRes = await prisma.personalInventoryItem.findFirst({ where: { listId: listBId, name: "Vitamins" } });
     mockAuthAs(ADMIN_CLERK_ID);
     const req = new NextRequest(`http://localhost/api/inventory-personal/${itemRes!.id}`, {
       method: "PATCH",
@@ -139,13 +167,13 @@ describe("personal inventory: ownership", () => {
     expect(res.status).toBe(200);
   });
 
-  it("rejects a duplicate name for the same tenant (409)", async () => {
+  it("rejects a duplicate name within the same list (409)", async () => {
     mockAuthAs(TENANT_A_CLERK_ID);
     const req = new NextRequest("http://localhost/api/inventory-personal", {
       method: "POST",
-      body: JSON.stringify({ name: "Protein Powder" }),
+      body: JSON.stringify({ listId: listAId, name: "Protein Powder" }),
     });
-    const res = await listPost(req);
+    const res = await itemPost(req);
     expect(res.status).toBe(409);
   });
 

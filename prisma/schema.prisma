@@ -54,8 +54,8 @@ model Tenant {
   rentReminderLogs        RentReminderLog[]
   rotationUnits           RotationUnit[]
   rotationTeamMembers     RotationTeamMember[]
-  personalInventoryItems  PersonalInventoryItem[]
-  personalInventoryShares PersonalInventoryShare[]
+  personalInventoryLists  PersonalInventoryList[]
+  personalInventoryListShares PersonalInventoryListShare[]
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
 }
@@ -315,10 +315,27 @@ model InventoryRunOut {
   reportedAt DateTime @default(now())
 }
 
+/// A named grouping of personal inventory items, owned by one tenant.
+/// Sharing happens at this level (see PersonalInventoryListShare) — an item
+/// always belongs to exactly one list and inherits its list's visibility.
+model PersonalInventoryList {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items  PersonalInventoryItem[]
+  shares PersonalInventoryListShare[]
+
+  @@unique([tenantId, name])
+}
+
 model PersonalInventoryItem {
-  id                Int       @id @default(autoincrement())
-  tenantId          Int
-  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                Int                   @id @default(autoincrement())
+  listId            Int
+  list              PersonalInventoryList @relation(fields: [listId], references: [id], onDelete: Cascade)
   name              String
   quantity          Float?
   unit              String?
@@ -326,25 +343,24 @@ model PersonalInventoryItem {
   description       String?
   expirationDate    DateTime?
   lowStockThreshold Float?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
-  shares PersonalInventoryShare[]
-
-  @@unique([tenantId, name])
+  @@unique([listId, name])
 }
 
-/// Read-only visibility grant: the owner (tenant of the parent item) shares
-/// an item with another resident, who can view but not edit or delete it.
-/// Ownership/write access always stays with PersonalInventoryItem.tenantId.
-model PersonalInventoryShare {
+/// Read-only visibility grant: the owner (tenant of the list) shares the
+/// whole list — and everything currently or later added to it — with another
+/// resident, who can view but not edit or delete. Ownership/write access
+/// always stays with PersonalInventoryList.tenantId.
+model PersonalInventoryListShare {
   id        Int                   @id @default(autoincrement())
-  itemId    Int
-  item      PersonalInventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  listId    Int
+  list      PersonalInventoryList @relation(fields: [listId], references: [id], onDelete: Cascade)
   tenantId  Int
   tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt DateTime              @default(now())
 
-  @@unique([itemId, tenantId])
+  @@unique([listId, tenantId])
   @@index([tenantId])
 }

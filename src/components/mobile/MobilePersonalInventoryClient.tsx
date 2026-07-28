@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { usePersonalInventory } from "@/hooks/usePersonalInventory";
 import { isLowStock, isExpiringSoon, isExpired } from "@/lib/personal-inventory";
-import type { PersonalInventoryItem } from "@/lib/personal-inventory";
 import MobileCard from "./MobileCard";
 import MobileBottomSheet from "./MobileBottomSheet";
 
 export default function MobilePersonalInventoryClient() {
   const {
-    items,
-    sharedWithMe,
+    ownLists,
+    sharedLists,
+    selection,
+    selectedOwnList,
+    selectedSharedList,
     roommates,
     loading,
     error,
@@ -19,145 +21,205 @@ export default function MobilePersonalInventoryClient() {
     form,
     setForm,
     savingId,
-    sharingId,
+    showListForm,
+    setShowListForm,
+    newListName,
+    setNewListName,
+    savingList,
+    sharingListId,
+    selectList,
+    createList,
+    renameList,
+    deleteList,
+    shareList,
     openCreateForm,
     openEditForm,
     closeForm,
     handleSubmit,
     handleDelete,
-    handleShareChange,
   } = usePersonalInventory();
 
-  const [sharingItem, setSharingItem] = useState<PersonalInventoryItem | null>(null);
+  const [sharingOpen, setSharingOpen] = useState(false);
   const [selectedTenantIds, setSelectedTenantIds] = useState<number[]>([]);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
 
-  const openShare = (item: PersonalInventoryItem) => {
-    setSharingItem(item);
-    setSelectedTenantIds(item.sharedWith.map((s) => s.tenantId));
+  const openShare = () => {
+    if (!selectedOwnList) return;
+    setSelectedTenantIds(selectedOwnList.sharedWith.map((s) => s.tenantId));
+    setSharingOpen(true);
   };
 
   const saveShare = async () => {
-    if (!sharingItem) return;
-    await handleShareChange(sharingItem.id, selectedTenantIds);
-    setSharingItem(null);
+    if (!selectedOwnList) return;
+    await shareList(selectedOwnList.id, selectedTenantIds);
+    setSharingOpen(false);
+  };
+
+  const startRename = () => {
+    if (!selectedOwnList) return;
+    setRenameValue(selectedOwnList.name);
+    setRenaming(true);
+  };
+
+  const saveRename = async () => {
+    if (!selectedOwnList || !renameValue.trim()) return;
+    await renameList(selectedOwnList.id, renameValue.trim());
+    setRenaming(false);
   };
 
   if (loading) {
     return <div className="p-6 text-center text-gray-400">Loading your inventory…</div>;
   }
 
+  const activeList = selectedOwnList ?? selectedSharedList;
+  const hasAnyList = ownLists.length > 0 || sharedLists.length > 0;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">My Inventory</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Only you can edit — sharing is view-only.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Share a whole list — view-only for others.</p>
         </div>
         <button
-          onClick={openCreateForm}
+          onClick={() => setShowListForm(true)}
           className="px-3 py-2 text-xs font-medium bg-meadowOrange hover:bg-orange-600 text-white rounded-xl transition-colors active:scale-[0.98]"
         >
-          + Add
+          + List
         </button>
       </div>
 
-      {items.length === 0 ? (
-        <p className="text-center py-10 text-gray-400 text-sm">No items yet. Add your first one above.</p>
+      {!hasAnyList ? (
+        <p className="text-center py-10 text-gray-400 text-sm">Create a list to start adding items.</p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {items.map((item) => (
-            <MobileCard key={item.id}>
-              <div className="flex items-start justify-between mb-1">
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{item.name}</span>
-                {item.category && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-meadowMuted dark:bg-darkSurface text-gray-500 dark:text-gray-400">
-                    {item.category}
-                  </span>
-                )}
-              </div>
-              {item.quantity !== null && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Qty: <span className="font-semibold text-gray-700 dark:text-gray-200">{item.quantity}</span>
-                  {item.unit && ` ${item.unit}`}
-                </p>
-              )}
-              {item.description && <p className="text-xs text-gray-400 mb-2">{item.description}</p>}
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {isLowStock(item) && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-medium">
-                    Low stock
-                  </span>
-                )}
-                {isExpired(item) ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
-                    Expired
-                  </span>
-                ) : (
-                  isExpiringSoon(item) && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 font-medium">
-                      Expires soon
-                    </span>
-                  )
-                )}
-              </div>
-              {item.sharedWith.length > 0 && (
-                <p className="text-[10px] text-gray-400 mb-3">
-                  Shared with {item.sharedWith.map((s) => s.name).join(", ")}
-                </p>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => openShare(item)}
-                  className="flex-1 py-1.5 text-xs font-medium border border-meadowBorder dark:border-darkBorder text-gray-600 dark:text-gray-300 rounded-md active:scale-[0.98] transition-transform"
-                >
-                  Share
-                </button>
-                <button
-                  onClick={() => openEditForm(item)}
-                  className="flex-1 py-1.5 text-xs font-medium border border-meadowBorder dark:border-darkBorder text-gray-600 dark:text-gray-300 rounded-md active:scale-[0.98] transition-transform"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  disabled={savingId === item.id}
-                  className="flex-1 py-1.5 text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md disabled:opacity-50"
-                >
-                  {savingId === item.id ? "…" : "Delete"}
-                </button>
-              </div>
-            </MobileCard>
-          ))}
-        </div>
+        <>
+          <select
+            value={selection ? `${selection.type}:${selection.id}` : ""}
+            onChange={(e) => {
+              const [type, id] = e.target.value.split(":");
+              selectList(type as "own" | "shared", Number(id));
+            }}
+            className="w-full px-3 py-2.5 rounded-xl border border-meadowBorder dark:border-darkBorder bg-white dark:bg-darkSurface text-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-meadowOrange"
+          >
+            {ownLists.length > 0 && (
+              <optgroup label="My Lists">
+                {ownLists.map((l) => (
+                  <option key={l.id} value={`own:${l.id}`}>
+                    {l.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {sharedLists.length > 0 && (
+              <optgroup label="Shared with you">
+                {sharedLists.map((l) => (
+                  <option key={l.id} value={`shared:${l.id}`}>
+                    {l.name} ({l.ownerName})
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+
+          {selectedOwnList && (
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={openShare}
+                className="flex-1 py-1.5 text-xs font-medium border border-meadowBorder dark:border-darkBorder text-gray-600 dark:text-gray-300 rounded-md active:scale-[0.98] transition-transform"
+              >
+                Share
+              </button>
+              <button
+                onClick={startRename}
+                className="flex-1 py-1.5 text-xs font-medium border border-meadowBorder dark:border-darkBorder text-gray-600 dark:text-gray-300 rounded-md active:scale-[0.98] transition-transform"
+              >
+                Rename
+              </button>
+              <button
+                onClick={() => deleteList(selectedOwnList.id)}
+                className="flex-1 py-1.5 text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md"
+              >
+                Delete
+              </button>
+              <button
+                onClick={openCreateForm}
+                className="flex-1 py-1.5 text-xs font-medium bg-meadowOrange hover:bg-orange-600 text-white rounded-md active:scale-[0.98] transition-transform"
+              >
+                + Add
+              </button>
+            </div>
+          )}
+
+          {selectedOwnList && selectedOwnList.sharedWith.length > 0 && (
+            <p className="text-[10px] text-gray-400">Shared with {selectedOwnList.sharedWith.map((s) => s.name).join(", ")}</p>
+          )}
+          {selectedSharedList && <p className="text-[10px] text-gray-400">Shared by {selectedSharedList.ownerName}</p>}
+
+          {activeList && activeList.items.length === 0 ? (
+            <p className="text-center py-10 text-gray-400 text-sm">No items in this list yet.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {activeList?.items.map((item) => (
+                <MobileCard key={item.id}>
+                  <div className="flex items-start justify-between mb-1">
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{item.name}</span>
+                    {item.category && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-meadowMuted dark:bg-darkSurface text-gray-500 dark:text-gray-400">
+                        {item.category}
+                      </span>
+                    )}
+                  </div>
+                  {item.quantity !== null && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      Qty: <span className="font-semibold text-gray-700 dark:text-gray-200">{item.quantity}</span>
+                      {item.unit && ` ${item.unit}`}
+                    </p>
+                  )}
+                  {item.description && <p className="text-xs text-gray-400 mb-2">{item.description}</p>}
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {isLowStock(item) && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-medium">
+                        Low stock
+                      </span>
+                    )}
+                    {isExpired(item) ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
+                        Expired
+                      </span>
+                    ) : (
+                      isExpiringSoon(item) && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 font-medium">
+                          Expires soon
+                        </span>
+                      )
+                    )}
+                  </div>
+                  {selectedOwnList && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openEditForm(item)}
+                        className="flex-1 py-1.5 text-xs font-medium border border-meadowBorder dark:border-darkBorder text-gray-600 dark:text-gray-300 rounded-md active:scale-[0.98] transition-transform"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        disabled={savingId === item.id}
+                        className="flex-1 py-1.5 text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md disabled:opacity-50"
+                      >
+                        {savingId === item.id ? "…" : "Delete"}
+                      </button>
+                    </div>
+                  )}
+                </MobileCard>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {sharedWithMe.length > 0 && (
-        <div className="flex flex-col gap-3 mt-2">
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Shared with you</h2>
-          {sharedWithMe.map((item) => (
-            <MobileCard key={item.id}>
-              <div className="flex items-start justify-between mb-1">
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{item.name}</span>
-                {item.category && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-meadowMuted dark:bg-darkSurface text-gray-500 dark:text-gray-400">
-                    {item.category}
-                  </span>
-                )}
-              </div>
-              {item.quantity !== null && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Qty: <span className="font-semibold text-gray-700 dark:text-gray-200">{item.quantity}</span>
-                  {item.unit && ` ${item.unit}`}
-                </p>
-              )}
-              {item.description && <p className="text-xs text-gray-400 mb-2">{item.description}</p>}
-              <p className="text-[10px] text-gray-400">Shared by {item.ownerName}</p>
-            </MobileCard>
-          ))}
-        </div>
-      )}
-
-      <MobileBottomSheet open={sharingItem !== null} onClose={() => setSharingItem(null)} title={`Share "${sharingItem?.name ?? ""}"`}>
+      <MobileBottomSheet open={sharingOpen} onClose={() => setSharingOpen(false)} title={`Share "${selectedOwnList?.name ?? ""}"`}>
         <div className="flex flex-col gap-3">
           {roommates.length === 0 ? (
             <p className="text-sm text-gray-400">No other residents to share with.</p>
@@ -185,10 +247,47 @@ export default function MobilePersonalInventoryClient() {
 
           <button
             onClick={saveShare}
-            disabled={sharingId !== null}
+            disabled={sharingListId !== null}
             className="w-full py-2.5 bg-meadowOrange hover:bg-orange-600 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50 active:scale-[0.98]"
           >
-            {sharingId !== null ? "Saving…" : "Save"}
+            {sharingListId !== null ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </MobileBottomSheet>
+
+      <MobileBottomSheet open={renaming} onClose={() => setRenaming(false)} title="Rename List">
+        <div className="flex flex-col gap-3">
+          <input
+            type="text"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border border-meadowBorder dark:border-darkBorder bg-white dark:bg-darkSurface text-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-meadowOrange"
+          />
+          <button
+            onClick={saveRename}
+            className="w-full py-2.5 bg-meadowOrange hover:bg-orange-600 text-white rounded-xl text-sm font-medium transition-colors active:scale-[0.98]"
+          >
+            Save
+          </button>
+        </div>
+      </MobileBottomSheet>
+
+      <MobileBottomSheet open={showListForm} onClose={() => setShowListForm(false)} title="New List">
+        <div className="flex flex-col gap-3">
+          <input
+            type="text"
+            value={newListName}
+            onChange={(e) => setNewListName(e.target.value)}
+            placeholder="e.g. Pantry, Bathroom"
+            className="w-full px-3 py-2.5 rounded-xl border border-meadowBorder dark:border-darkBorder bg-white dark:bg-darkSurface text-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-meadowOrange"
+          />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <button
+            onClick={createList}
+            disabled={savingList}
+            className="w-full py-2.5 bg-meadowOrange hover:bg-orange-600 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50 active:scale-[0.98]"
+          >
+            {savingList ? "Creating…" : "Create"}
           </button>
         </div>
       </MobileBottomSheet>
