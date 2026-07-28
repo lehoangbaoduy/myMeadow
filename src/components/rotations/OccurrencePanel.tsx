@@ -16,25 +16,66 @@ type Props = {
     status: "COMPLETED" | "MISSED",
     notes: string
   ) => Promise<{ ok: boolean; error?: string }>;
+  onQuickShift: (effectiveDate: string, offsetPositions: number, reason: string) => Promise<{ ok: boolean; error?: string }>;
 };
 
 function todayIso(): string {
   return new Date().toISOString().split("T")[0];
 }
 
-export default function OccurrencePanel({ title, table, hint, recent, busy, onSubmit }: Props) {
+function toIso(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** The next occurrence date after a missed one — a week later for trash/dishes, the next 1st/15th for bathroom. */
+function nextOccurrenceDate(table: ChoreTableKey, missedDateIso: string): string {
+  const [y, m, d] = missedDateIso.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  if (table === "BATHROOM") {
+    const next = date.getDate() === 1
+      ? new Date(date.getFullYear(), date.getMonth(), 15)
+      : new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    return toIso(next);
+  }
+  date.setDate(date.getDate() + 7);
+  return toIso(date);
+}
+
+export default function OccurrencePanel({ title, table, hint, recent, busy, onSubmit, onQuickShift }: Props) {
   const [date, setDate] = useState(todayIso());
   const [status, setStatus] = useState<"COMPLETED" | "MISSED">("COMPLETED");
   const [notes, setNotes] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [missedDate, setMissedDate] = useState<string | null>(null);
+  const [shiftError, setShiftError] = useState<string | null>(null);
+  const [shiftDone, setShiftDone] = useState(false);
 
   const handleSubmit = async () => {
     setFormError(null);
+    setShiftError(null);
+    setShiftDone(false);
     const result = await onSubmit(table, date, status, notes);
     if (result.ok) {
       setNotes("");
+      setMissedDate(status === "MISSED" ? date : null);
     } else {
       setFormError(result.error ?? "Failed to record");
+    }
+  };
+
+  const handlePushBack = async () => {
+    if (!missedDate) return;
+    setShiftError(null);
+    const effectiveDate = nextOccurrenceDate(table, missedDate);
+    const result = await onQuickShift(effectiveDate, -1, `Missed turn on ${missedDate}`);
+    if (result.ok) {
+      setShiftDone(true);
+      setMissedDate(null);
+    } else {
+      setShiftError(result.error ?? "Failed to shift the rotation");
     }
   };
 
@@ -83,6 +124,31 @@ export default function OccurrencePanel({ title, table, hint, recent, busy, onSu
         </button>
       </div>
       {formError && <p className="text-xs text-red-500 mb-2">{formError}</p>}
+
+      {missedDate && (
+        <div className="mb-2 px-3 py-2.5 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 flex flex-wrap items-center gap-2">
+          <p className="text-xs text-orange-800 dark:text-orange-300 flex-1">
+            Push the rest of the rotation back one turn, starting {nextOccurrenceDate(table, missedDate)}?
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={handlePushBack}
+            className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+          >
+            Push back one turn
+          </button>
+          <button
+            type="button"
+            onClick={() => setMissedDate(null)}
+            className="px-3 py-1.5 border border-orange-300 dark:border-orange-800/50 text-orange-800 dark:text-orange-300 rounded-lg text-xs font-medium"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      {shiftError && <p className="text-xs text-red-500 mb-2">{shiftError}</p>}
+      {shiftDone && <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-2">Rotation shifted — see the shift panel for details.</p>}
 
       {recent.length > 0 && (
         <div className="mt-4 pt-4 border-t border-meadowBorder dark:border-darkBorder">

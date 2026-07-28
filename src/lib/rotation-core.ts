@@ -156,6 +156,46 @@ async function getBaseIndex(rotationType: RotationType, date: Date): Promise<num
   return getWeekIndex(date);
 }
 
+function addDays(date: Date, days: number): Date {
+  const d = toDateOnly(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function toIsoDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * One representative date per upcoming occurrence, starting on/after
+ * `fromDate` — a Thursday per week for TRASH_DISHES (trash+dishes share one
+ * roster position per week), or the next 1st/15th for BATHROOM. Used to
+ * preview "what would the next few turns look like" without materializing
+ * any TrashAssignment/DishesAssignment/BathroomAssignment rows.
+ */
+export function upcomingRepresentativeDates(rotationType: RotationType, fromDate: Date, count: number): Date[] {
+  if (rotationType === "BATHROOM") {
+    const dates: Date[] = [];
+    let d = toDateOnly(fromDate);
+    if (d.getDate() > 15) {
+      d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    } else if (d.getDate() > 1) {
+      d = new Date(d.getFullYear(), d.getMonth(), 15);
+    }
+    for (let i = 0; i < count; i++) {
+      dates.push(new Date(d));
+      d = d.getDate() === 1 ? new Date(d.getFullYear(), d.getMonth(), 15) : new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    }
+    return dates;
+  }
+
+  const start = getThursdayOfWeek(fromDate);
+  return Array.from({ length: count }, (_, i) => addDays(start, i * 7));
+}
+
 export async function getAccumulatedShift(rotationType: RotationType, date: Date): Promise<number> {
   const shifts = await prisma.rotationShift.findMany({
     where: { rotationType, effectiveDate: { lte: date } },
@@ -313,6 +353,55 @@ export async function recordShift(rotationType: RotationType, input: RecordShift
   return { id: shift.id };
 }
 
+export interface OccurrencePreview {
+  date: string;
+  before: string;
+  after: string;
+}
+
+export interface ShiftPreview {
+  currentTotalShift: number;
+  occurrences: OccurrencePreview[];
+}
+
+/**
+ * Read-only "what if" preview for a hypothetical (not-yet-recorded) shift —
+ * shows the next few turns as they stand today ("before") vs. as they'd be
+ * with this shift applied from effectiveDate onward ("after"), plus the
+ * total shift already in effect as of that date (shifts stack, they don't
+ * replace each other). Never writes anything; used by the admin UI so a
+ * shift can be checked before it's submitted.
+ */
+export async function previewShift(
+  rotationType: RotationType,
+  effectiveDate: Date,
+  offsetPositions: number,
+  count = 6
+): Promise<ShiftPreview> {
+  const roster = await getRoster(rotationType);
+  const currentTotalShift = await getAccumulatedShift(rotationType, effectiveDate);
+
+  if (roster.length === 0) {
+    return { currentTotalShift, occurrences: [] };
+  }
+
+  const dates = upcomingRepresentativeDates(rotationType, effectiveDate, count);
+  const occurrences: OccurrencePreview[] = [];
+  for (const date of dates) {
+    const baseIndex = await getBaseIndex(rotationType, date);
+    const shiftAsOf = await getAccumulatedShift(rotationType, date);
+    const beforeUnit = roster[mod(baseIndex + shiftAsOf, roster.length)];
+    const afterUnit = roster[mod(baseIndex + shiftAsOf + offsetPositions, roster.length)];
+    occurrences.push({
+      date: toIsoDateString(date),
+      before: resolveLabelAndMembers(beforeUnit).label,
+      after: resolveLabelAndMembers(afterUnit).label,
+    });
+  }
+
+  return { currentTotalShift, occurrences };
+}
+
 const TABLE_TO_ROTATION_TYPE: Record<ChoreTable, RotationType> = {
   TRASH: "TRASH_DISHES",
   DISHES: "TRASH_DISHES",
@@ -369,4 +458,4 @@ export async function ensureOccurrence(choreTable: ChoreTable, date: Date) {
   });
 }
 
-export { getWeekIndex, getThursdayOfWeek, getFridayOfWeek, BASE_THURSDAY };
+export { getWeekIndex, getThursdayOfWeek, getFridayOfWeek, getBaseIndex, BASE_THURSDAY };

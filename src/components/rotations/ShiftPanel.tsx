@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ShiftRow } from "@/lib/rotation-admin-data";
+import type { RotationTypeKey } from "@/hooks/useRotationAdmin";
+
+type PreviewOccurrence = { date: string; before: string; after: string };
+type Preview = { currentTotalShift: number; occurrences: PreviewOccurrence[] };
 
 type Props = {
+  type: RotationTypeKey;
   recentShifts: ShiftRow[];
   busy: boolean;
   onSubmit: (effectiveDate: string, offsetPositions: number, reason: string) => Promise<{ ok: boolean; error?: string }>;
@@ -15,11 +20,48 @@ function tomorrowIso(): string {
   return d.toISOString().split("T")[0];
 }
 
-export default function ShiftPanel({ recentShifts, busy, onSubmit }: Props) {
+export default function ShiftPanel({ type, recentShifts, busy, onSubmit }: Props) {
   const [effectiveDate, setEffectiveDate] = useState(tomorrowIso());
   const [offset, setOffset] = useState(1);
   const [reason, setReason] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!effectiveDate || !offset) {
+      setPreview(null);
+      setPreviewError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/rotations/${type}/shift/preview?effectiveDate=${effectiveDate}&offsetPositions=${offset}`,
+          { signal: controller.signal }
+        );
+        const body = await res.json();
+        if (!res.ok) {
+          setPreview(null);
+          setPreviewError(body.error ?? "Could not load preview");
+          return;
+        }
+        setPreviewError(null);
+        setPreview(body);
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setPreview(null);
+        setPreviewError("Could not load preview");
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [type, effectiveDate, offset]);
 
   const handleSubmit = async () => {
     setFormError(null);
@@ -77,6 +119,39 @@ export default function ShiftPanel({ recentShifts, busy, onSubmit }: Props) {
         </button>
       </div>
       {formError && <p className="text-xs text-red-500 mb-2">{formError}</p>}
+
+      {previewError && <p className="text-xs text-red-500 mb-2">{previewError}</p>}
+
+      {preview && preview.occurrences.length > 0 && (
+        <div className="mt-3 mb-2 p-3 rounded-lg bg-meadowLight dark:bg-darkSurface border border-meadowBorder dark:border-darkBorder">
+          <p className="text-xs text-gray-400 mb-2">
+            Shift already in effect as of this date:{" "}
+            <span className="font-semibold text-gray-600 dark:text-gray-300">
+              {preview.currentTotalShift > 0 ? "+" : ""}
+              {preview.currentTotalShift}
+            </span>{" "}
+            — this new shift adds to it, it doesn't replace it.
+          </p>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-gray-400">
+                <th className="text-left font-semibold uppercase tracking-wide pb-1.5">Date</th>
+                <th className="text-left font-semibold uppercase tracking-wide pb-1.5">Currently</th>
+                <th className="text-left font-semibold uppercase tracking-wide pb-1.5">After this shift</th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.occurrences.map((o) => (
+                <tr key={o.date} className="text-gray-600 dark:text-gray-300">
+                  <td className="py-1 pr-2">{o.date}</td>
+                  <td className="py-1 pr-2">{o.before}</td>
+                  <td className={`py-1 ${o.before !== o.after ? "font-semibold text-meadowOrange" : ""}`}>{o.after}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {recentShifts.length > 0 && (
         <div className="mt-4 pt-4 border-t border-meadowBorder dark:border-darkBorder">

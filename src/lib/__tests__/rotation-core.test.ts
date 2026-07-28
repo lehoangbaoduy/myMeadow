@@ -8,6 +8,7 @@ import {
   getFridaysInMonth,
   getBathroomDatesInMonth,
   bathroomOccurrenceIndexFromParts,
+  upcomingRepresentativeDates,
 } from "@/lib/rotation-core";
 
 describe("getWeekIndex", () => {
@@ -102,5 +103,36 @@ describe("bathroomOccurrenceIndexFromParts", () => {
     const dec15_2025 = bathroomOccurrenceIndexFromParts(2025, 11, 15);
     const jan1_2026 = bathroomOccurrenceIndexFromParts(2026, 0, 1);
     expect(jan1_2026).toBe(dec15_2025 + 1);
+  });
+});
+
+describe("upcomingRepresentativeDates", () => {
+  it("TRASH_DISHES: one Thursday per week, starting from the same-week Thursday", () => {
+    const dates = upcomingRepresentativeDates("TRASH_DISHES", new Date(2025, 0, 9), 4);
+    expect(dates.map((d) => d.getDate())).toEqual([9, 16, 23, 30]);
+    expect(dates.every((d) => d.getDay() === 4)).toBe(true);
+  });
+
+  it("rolls forward to the next Thursday when fromDate isn't one", () => {
+    const dates = upcomingRepresentativeDates("TRASH_DISHES", new Date(2025, 0, 1), 2); // Wednesday
+    expect(dates.map((d) => d.getDate())).toEqual([2, 9]);
+  });
+
+  it("BATHROOM: steps through the 1st and 15th", () => {
+    const dates = upcomingRepresentativeDates("BATHROOM", new Date(2025, 0, 1), 4);
+    expect(dates.map((d) => [d.getMonth(), d.getDate()])).toEqual([
+      [0, 1],
+      [0, 15],
+      [1, 1],
+      [1, 15],
+    ]);
+  });
+
+  it("BATHROOM: rolls forward to the next occurrence when fromDate is mid-cycle", () => {
+    const dates = upcomingRepresentativeDates("BATHROOM", new Date(2025, 0, 10), 2);
+    expect(dates.map((d) => [d.getMonth(), d.getDate()])).toEqual([
+      [0, 15],
+      [1, 1],
+    ]);
   });
 });

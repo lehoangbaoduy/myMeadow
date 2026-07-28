@@ -81,6 +81,7 @@ export default function RotationAdminClient({ initialData }: Props) {
 
         <div className="flex flex-col gap-6">
           <ShiftPanel
+            type={tab}
             recentShifts={current.recentShifts}
             busy={busy}
             onSubmit={(effectiveDate, offset, reason) => recordShift(tab, effectiveDate, offset, reason)}
@@ -95,6 +96,7 @@ export default function RotationAdminClient({ initialData }: Props) {
                 recent={data.recentTrash}
                 busy={busy}
                 onSubmit={completeOccurrence}
+                onQuickShift={(effectiveDate, offset, reason) => recordShift(tab, effectiveDate, offset, reason)}
               />
               <OccurrencePanel
                 title="Dishes"
@@ -103,6 +105,7 @@ export default function RotationAdminClient({ initialData }: Props) {
                 recent={data.recentDishes}
                 busy={busy}
                 onSubmit={completeOccurrence}
+                onQuickShift={(effectiveDate, offset, reason) => recordShift(tab, effectiveDate, offset, reason)}
               />
             </>
           ) : (
@@ -113,6 +116,7 @@ export default function RotationAdminClient({ initialData }: Props) {
               recent={data.recentBathroom}
               busy={busy}
               onSubmit={completeOccurrence}
+              onQuickShift={(effectiveDate, offset, reason) => recordShift(tab, effectiveDate, offset, reason)}
             />
           )}
         </div>
