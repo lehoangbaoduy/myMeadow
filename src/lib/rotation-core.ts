@@ -263,32 +263,51 @@ export interface RosterLabelEntry {
   members: string[];
 }
 
-/**
- * The roster for a rotation type, pre-rotated so a caller doing plain
- * `roster[weekIndex % roster.length]` client-side math lands on the same
- * unit `resolveUnit` would compute server-side (accumulated shifts folded
- * into the array order). Used by calendar UI that renders a whole month of
- * tiles without a round-trip per date. Does not track shift boundaries
- * that fall mid-range — the persisted TrashAssignment/DishesAssignment/
- * BathroomAssignment rows (via ensureOccurrence) remain the source of truth
- * for admin actions and history; this is a fast preview only.
- */
-export async function getEffectiveRosterLabels(
-  rotationType: RotationType,
-  date: Date = new Date()
-): Promise<RosterLabelEntry[]> {
-  const roster = await getRoster(rotationType);
-  const n = roster.length;
-  if (n === 0) return [];
+/** One recorded shift, serialized for a client component prop (RSC boundary requires plain data, not Date). */
+export interface ShiftDelta {
+  effectiveDate: string; // "YYYY-MM-DD"
+  offsetPositions: number;
+}
 
+/**
+ * Everything a calendar tile needs to resolve "who has position P on date D"
+ * for a whole visible month without a round-trip per date: the roster in its
+ * unshifted order, plus every recorded shift delta. Unlike a pre-rotated
+ * snapshot (the previous approach), this lets each tile independently sum
+ * only the shifts whose effectiveDate is on/before that specific tile's date
+ * via accumulatedShiftAsOf() — so a shift with an effectiveDate in the future
+ * (or in the past relative to "today") is correctly reflected for the dates
+ * it actually applies to, not just for "today".
+ */
+export interface RotationScheduleSource {
+  roster: RosterLabelEntry[];
+  shifts: ShiftDelta[];
+}
+
+/** Sums shift deltas effective on/before `date` — the client-side, already-fetched-data equivalent of getAccumulatedShift(). */
+export function accumulatedShiftAsOf(shifts: ShiftDelta[], date: Date): number {
+  const dateIso = toIsoDateString(date);
+  return shifts.reduce((sum, s) => (s.effectiveDate <= dateIso ? sum + s.offsetPositions : sum), 0);
+}
+
+/** The roster (unshifted) plus every recorded shift delta for a rotation type — see RotationScheduleSource. */
+export async function getRotationScheduleSource(rotationType: RotationType): Promise<RotationScheduleSource> {
+  const roster = await getRoster(rotationType);
   const resolved = roster.map((unit) => {
     const { label, members } = resolveLabelAndMembers(unit);
     return { label, members: members.map((m) => m.name) };
   });
 
-  const shift = await getAccumulatedShift(rotationType, date);
-  const offset = mod(shift, n);
-  return Array.from({ length: n }, (_, i) => resolved[mod(i + offset, n)]);
+  const shiftRows = await prisma.rotationShift.findMany({
+    where: { rotationType },
+    select: { effectiveDate: true, offsetPositions: true },
+  });
+  const shifts = shiftRows.map((s) => ({
+    effectiveDate: toIsoDateString(s.effectiveDate),
+    offsetPositions: s.offsetPositions,
+  }));
+
+  return { roster: resolved, shifts };
 }
 
 /** Full Tenant records (contact info included) for whoever is assigned on `date` — used to deliver reminders to every member of a team. */

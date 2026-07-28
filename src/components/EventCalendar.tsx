@@ -11,7 +11,7 @@ import {
   getDishesAssignment,
   isSameDay,
 } from "@/lib/rotation-assignments";
-import type { RosterLabelEntry } from "@/lib/duty-tenants";
+import type { RotationScheduleSource } from "@/lib/duty-tenants";
 import type { RecentCompletedTurn } from "@/lib/recent-completed-turn";
 import { useReminderControls } from "@/hooks/useReminderControls";
 
@@ -24,12 +24,14 @@ interface Birthday {
   day: number;   // 1-31
 }
 
+const EMPTY_SCHEDULE_SOURCE: RotationScheduleSource = { roster: [], shifts: [] };
+
 interface Props {
   isAdmin?: boolean;
   birthdays?: Birthday[];
-  trashTenants?: RosterLabelEntry[];
-  bathroomTenants?: RosterLabelEntry[];
-  dishesTenants?: RosterLabelEntry[];
+  trashTenants?: RotationScheduleSource;
+  bathroomTenants?: RotationScheduleSource;
+  dishesTenants?: RotationScheduleSource;
   recentCompletedTurn?: RecentCompletedTurn | null;
 }
 
@@ -42,9 +44,9 @@ const CHORE_TABLE_DISPLAY: Record<RecentCompletedTurn["choreTable"], { label: st
 const EventCalendar = ({
   isAdmin = false,
   birthdays = [],
-  trashTenants = [],
-  bathroomTenants = [],
-  dishesTenants = [],
+  trashTenants = EMPTY_SCHEDULE_SOURCE,
+  bathroomTenants = EMPTY_SCHEDULE_SOURCE,
+  dishesTenants = EMPTY_SCHEDULE_SOURCE,
   recentCompletedTurn = null,
 }: Props) => {
   const today = new Date();

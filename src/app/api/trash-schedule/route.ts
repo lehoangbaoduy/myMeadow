@@ -41,10 +41,7 @@ export async function GET(req: NextRequest) {
     include: { unit: { include: unitInclude } },
   });
 
-  const generated = generateSchedule(
-    thursdays,
-    roster.map((r) => r.label)
-  );
+  const generated = generateSchedule(thursdays, roster);
 
   const overrideData = dbOverrides.map((o) => ({
     date: o.date,

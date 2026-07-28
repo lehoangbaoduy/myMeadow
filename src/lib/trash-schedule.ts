@@ -1,4 +1,5 @@
-import { getWeekIndex, getThursdayOfWeek, getThursdaysInMonth, isRecycleWeek } from "@/lib/rotation-core";
+import { getWeekIndex, getThursdayOfWeek, getThursdaysInMonth, isRecycleWeek, accumulatedShiftAsOf } from "@/lib/rotation-core";
+import type { RotationScheduleSource } from "@/lib/duty-tenants";
 
 export interface TrashEvent {
   date: Date;
@@ -7,11 +8,13 @@ export interface TrashEvent {
   isOverride: boolean;
 }
 
-export function generateSchedule(thursdays: Date[], roster: string[]): TrashEvent[] {
+export function generateSchedule(thursdays: Date[], source: RotationScheduleSource): TrashEvent[] {
+  const { roster, shifts } = source;
   if (roster.length === 0) return [];
   return thursdays.map((date) => {
     const weekIdx = getWeekIndex(date);
-    const tenantName = roster[((weekIdx % roster.length) + roster.length) % roster.length];
+    const shift = accumulatedShiftAsOf(shifts, date);
+    const tenantName = roster[((weekIdx + shift) % roster.length + roster.length) % roster.length].label;
     return { date, tenantName, hasRecycle: isRecycleWeek(weekIdx), isOverride: false };
   });
 }

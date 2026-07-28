@@ -16,6 +16,7 @@ import {
   getBathroomAssignment,
   getDishesAssignment,
 } from "@/lib/rotation-assignments";
+import type { RotationScheduleSource } from "@/lib/duty-tenants";
 
 /**
  * Characterization tests for the rotation logic BEFORE the rotation-engine
@@ -23,6 +24,10 @@ import {
  * refactor can be verified not to silently change anything except the
  * one documented fix (recycle-week parity).
  */
+
+function toSource(names: string[]): RotationScheduleSource {
+  return { roster: names.map((name) => ({ label: name, members: [name] })), shifts: [] };
+}
 
 describe("trash-schedule week index (anchor: Thursday Jan 2 2025)", () => {
   it("returns 0 for the anchor week", () => {
@@ -87,7 +92,7 @@ describe("generateSchedule rotation assignment (modulo over tenant list)", () =>
 
   it("assigns tenants in order across consecutive weeks", () => {
     const thursdays = getThursdaysInMonth(2025, 0); // 5 Thursdays
-    const schedule = generateTrashSchedule(thursdays, tenants);
+    const schedule = generateTrashSchedule(thursdays, toSource(tenants));
     expect(schedule.map((e) => e.tenantName)).toEqual([
       "Bao",
       "Cuong",
@@ -99,8 +104,8 @@ describe("generateSchedule rotation assignment (modulo over tenant list)", () =>
 
   it("returns an empty schedule when there are no tenants", () => {
     const thursdays = getThursdaysInMonth(2025, 0);
-    expect(generateTrashSchedule(thursdays, [])).toEqual([]);
-    expect(generateDishesSchedule(getFridaysInMonth(2025, 0), [])).toEqual([]);
+    expect(generateTrashSchedule(thursdays, toSource([]))).toEqual([]);
+    expect(generateDishesSchedule(getFridaysInMonth(2025, 0), toSource([]))).toEqual([]);
   });
 });
 
@@ -109,11 +114,11 @@ describe("FIXED: recycle-week parity now agrees between call sites", () => {
   // weekIdx % 2 === 0 — opposite rules, confirmed disagreeing for every week.
   // rotation-core.ts now unifies both onto trash-schedule.ts's rule
   // (isRecycleWeek), and rotation-assignments.ts delegates to it.
-  const roster = [{ label: "Bao", members: ["Bao"] }];
+  const roster: RotationScheduleSource = toSource(["Bao"]);
 
   it("trash-schedule.ts marks the anchor week (weekIdx 0) as NOT a recycle week", () => {
     const thursdays = [new Date(2025, 0, 2)];
-    const schedule = generateTrashSchedule(thursdays, ["Bao"]);
+    const schedule = generateTrashSchedule(thursdays, toSource(["Bao"]));
     expect(schedule[0].hasRecycle).toBe(false);
   });
 
@@ -124,7 +129,7 @@ describe("FIXED: recycle-week parity now agrees between call sites", () => {
 
   it("the two call sites agree for the same date", () => {
     const date = new Date(2025, 0, 2);
-    const fromSchedule = generateTrashSchedule([date], ["Bao"])[0].hasRecycle;
+    const fromSchedule = generateTrashSchedule([date], toSource(["Bao"]))[0].hasRecycle;
     const fromAssignment = getTrashAssignment(date, roster).hasRecycle;
     expect(fromSchedule).toBe(fromAssignment);
   });
@@ -134,11 +139,7 @@ describe("FIXED: rotation-assignments bathroom uses the true semimonthly (1st/15
   // Was: Math.floor(weekIdx / 2) — a biweekly-by-week approximation that
   // drifted from actual 1st/15th calendar days. Now anchored to the real
   // semimonthly occurrence index (bathroomOccurrenceIndexFromParts).
-  const bathroomRoster = [
-    { label: "Ngan", members: ["Ngan"] },
-    { label: "Nhi", members: ["Nhi"] },
-    { label: "Thao", members: ["Thao"] },
-  ];
+  const bathroomRoster: RotationScheduleSource = toSource(["Ngan", "Nhi", "Thao"]);
 
   it("assigns the same person for the whole 1st-14th window, then advances on the 15th", () => {
     const first = getBathroomAssignment(new Date(2025, 0, 1), bathroomRoster);
@@ -153,9 +154,9 @@ describe("getDishesAssignment", () => {
   it("matches generateDishesSchedule's rotation for the same tenants/date", () => {
     const friday = new Date(2025, 0, 3);
     const tenants = ["Ngan", "Nhi", "Thao"];
-    const roster = tenants.map((name) => ({ label: name, members: [name] }));
+    const roster = toSource(tenants);
     const viaAssignment = getDishesAssignment(friday, roster);
-    const viaSchedule = generateDishesSchedule([friday], tenants)[0].tenantName;
+    const viaSchedule = generateDishesSchedule([friday], roster)[0].tenantName;
     expect(viaAssignment).toBe(viaSchedule);
   });
 });

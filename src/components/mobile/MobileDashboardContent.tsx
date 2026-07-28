@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CUR_MONTH, CUR_YEAR, fmtLabel, type UtilityBillRow } from "@/components/DashboardContent";
 import { getThursdayOfWeek } from "@/lib/trash-schedule";
 import { getTrashAssignment, getBathroomAssignment } from "@/lib/rotation-assignments";
-import type { RosterLabelEntry } from "@/lib/duty-tenants";
+import type { RotationScheduleSource } from "@/lib/duty-tenants";
 import MobileCard from "./MobileCard";
 
 interface RunOutItem {
@@ -14,8 +14,8 @@ interface RunOutItem {
 
 interface Props {
   bills: UtilityBillRow[];
-  trashTenants: RosterLabelEntry[];
-  bathroomTenants: RosterLabelEntry[];
+  trashTenants: RotationScheduleSource;
+  bathroomTenants: RotationScheduleSource;
   runOutItems: RunOutItem[];
 }
 

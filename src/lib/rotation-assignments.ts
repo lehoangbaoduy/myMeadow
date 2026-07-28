@@ -1,6 +1,6 @@
 import { getThursdayOfWeek } from "@/lib/trash-schedule";
-import { getWeekIndex, isRecycleWeek, bathroomOccurrenceIndexFromParts } from "@/lib/rotation-core";
-import type { RosterLabelEntry } from "@/lib/duty-tenants";
+import { getWeekIndex, isRecycleWeek, bathroomOccurrenceIndexFromParts, accumulatedShiftAsOf } from "@/lib/rotation-core";
+import type { RosterLabelEntry, RotationScheduleSource } from "@/lib/duty-tenants";
 
 /**
  * Pure rotation-assignment math shared by every screen that renders the
@@ -9,30 +9,40 @@ import type { RosterLabelEntry } from "@/lib/duty-tenants";
  * assignments for the same day. Week-index and recycle-parity math is
  * delegated to rotation-core.ts so this can never drift from the
  * server-side resolver again.
+ *
+ * Each date resolves its OWN accumulated shift via accumulatedShiftAsOf(),
+ * rather than indexing into a single roster snapshot pre-rotated as of
+ * "today" — that snapshot approach made every tile in a visible month use
+ * the same offset regardless of the date it represented, so a shift whose
+ * effectiveDate fell inside the shown range (before or after "today")
+ * silently failed to change what the calendar displayed.
  */
 
 const EMPTY_ENTRY: RosterLabelEntry = { label: "—", members: [] };
 
-function pickFromRoster(roster: RosterLabelEntry[], index: number): RosterLabelEntry {
+function pickFromRoster(source: RotationScheduleSource, baseIndex: number, date: Date): RosterLabelEntry {
+  const { roster, shifts } = source;
   if (roster.length === 0) return EMPTY_ENTRY;
-  return roster[((index % roster.length) + roster.length) % roster.length];
+  const shift = accumulatedShiftAsOf(shifts, date);
+  const index = ((baseIndex + shift) % roster.length + roster.length) % roster.length;
+  return roster[index];
 }
 
-export function getTrashAssignment(thursday: Date, roster: RosterLabelEntry[]) {
+export function getTrashAssignment(thursday: Date, source: RotationScheduleSource) {
   const weekIdx = getWeekIndex(thursday);
-  const unit = pickFromRoster(roster, weekIdx);
+  const unit = pickFromRoster(source, weekIdx, thursday);
   return { tenant: unit.label, members: unit.members, hasRecycle: isRecycleWeek(weekIdx) };
 }
 
 /** `date` is any day — the semimonthly occurrence (1st or 15th cycle) is derived from its calendar day, not the weekday. */
-export function getBathroomAssignment(date: Date, roster: RosterLabelEntry[]) {
+export function getBathroomAssignment(date: Date, source: RotationScheduleSource) {
   const index = bathroomOccurrenceIndexFromParts(date.getFullYear(), date.getMonth(), date.getDate());
-  return pickFromRoster(roster, index).label;
+  return pickFromRoster(source, index, date).label;
 }
 
-export function getDishesAssignment(friday: Date, roster: RosterLabelEntry[]) {
+export function getDishesAssignment(friday: Date, source: RotationScheduleSource) {
   const weekIdx = getWeekIndex(friday);
-  return pickFromRoster(roster, weekIdx).label;
+  return pickFromRoster(source, weekIdx, friday).label;
 }
 
 export function isSameDay(a: Date, b: Date): boolean {

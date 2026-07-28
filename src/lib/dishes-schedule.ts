@@ -1,4 +1,5 @@
-import { getWeekIndex, getFridayOfWeek, getFridaysInMonth } from "@/lib/rotation-core";
+import { getWeekIndex, getFridayOfWeek, getFridaysInMonth, accumulatedShiftAsOf } from "@/lib/rotation-core";
+import type { RotationScheduleSource } from "@/lib/duty-tenants";
 
 export interface DishesEvent {
   date: Date;
@@ -6,11 +7,13 @@ export interface DishesEvent {
   isOverride: boolean;
 }
 
-export function generateSchedule(fridays: Date[], roster: string[]): DishesEvent[] {
+export function generateSchedule(fridays: Date[], source: RotationScheduleSource): DishesEvent[] {
+  const { roster, shifts } = source;
   if (roster.length === 0) return [];
   return fridays.map((date) => {
     const weekIdx = getWeekIndex(date);
-    const tenantName = roster[((weekIdx % roster.length) + roster.length) % roster.length];
+    const shift = accumulatedShiftAsOf(shifts, date);
+    const tenantName = roster[((weekIdx + shift) % roster.length + roster.length) % roster.length].label;
     return { date, tenantName, isOverride: false };
   });
 }
