@@ -17,11 +17,14 @@ export function useKitchenInventory() {
   const [historyEntries, setHistoryEntries] = useState<LevelLogEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  const fetchItems = async () => {
+    const res = await fetch("/api/inventory");
+    const data = await res.json();
+    setItems(data);
+  };
+
   useEffect(() => {
-    fetch("/api/inventory")
-      .then((r) => r.json())
-      .then(setItems)
-      .finally(() => setLoading(false));
+    fetchItems().finally(() => setLoading(false));
   }, []);
 
   const fetchRunOut = async () => {
@@ -98,6 +101,7 @@ export function useKitchenInventory() {
       body: JSON.stringify({ id }),
     });
     setRunOutList((prev) => prev.filter((r) => r.id !== id));
+    await fetchItems();
     setResolvingId(null);
   };
 
