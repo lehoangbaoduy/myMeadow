@@ -282,6 +282,24 @@ model InventoryItem {
   isCustom  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  levelLogs InventoryLevelLog[]
+}
+
+/// Attribution + history for restocks. Only logged when the level goes UP
+/// (a restock) — dragging the level down or reporting a run-out is tracked
+/// separately via InventoryRunOut and isn't "who filled it up".
+model InventoryLevelLog {
+  id              Int           @id @default(autoincrement())
+  itemId          Int
+  item            InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  changedByUserId Int
+  changedByName   String
+  previousLevel   Float
+  newLevel        Float
+  createdAt       DateTime      @default(now())
+
+  @@index([itemId, createdAt])
 }
 
 model AppSetting {

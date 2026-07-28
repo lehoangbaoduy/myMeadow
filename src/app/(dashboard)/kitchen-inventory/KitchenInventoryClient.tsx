@@ -17,11 +17,16 @@ export default function KitchenInventoryClient() {
     savingId,
     buzzingId,
     resolvingId,
+    historyItem,
+    historyEntries,
+    loadingHistory,
     fetchRunOut,
     handleLevelChange,
     handleBuzz,
     handleAddItem,
     handleResolve,
+    openHistory,
+    closeHistory,
     grouped,
   } = useKitchenInventory();
 
@@ -85,6 +90,14 @@ export default function KitchenInventoryClient() {
                     level={item.level}
                     onChange={(v) => handleLevelChange(item, v)}
                   />
+                  <button
+                    onClick={() => openHistory(item)}
+                    className="mt-2 w-full text-left text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    {item.lastRestock
+                      ? `Last filled by ${item.lastRestock.name} · ${new Date(item.lastRestock.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                      : "No restock history yet"}
+                  </button>
                   <button
                     onClick={() => handleBuzz(item)}
                     disabled={buzzingId === item.id}
@@ -177,6 +190,52 @@ export default function KitchenInventoryClient() {
               </table>
             )}
             <button onClick={() => setShowRunOut(false)}
+              className="mt-5 w-full py-2 border border-meadowBorder dark:border-darkBorder text-gray-700 dark:text-gray-300 rounded-md text-sm hover:bg-meadowMuted dark:hover:bg-darkSurface transition-colors">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Restock History Modal */}
+      {historyItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-darkCard rounded-xl border border-meadowBorder dark:border-darkBorder p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                {historyItem.icon ?? "📦"} {historyItem.name} — Restock History
+              </h2>
+              <button onClick={closeHistory} className="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            {loadingHistory ? (
+              <p className="text-center py-8 text-gray-400 text-sm">Loading…</p>
+            ) : historyEntries.length === 0 ? (
+              <p className="text-center py-8 text-gray-400 text-sm">No restocks logged yet.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-meadowMuted dark:bg-darkSurface text-gray-600 dark:text-gray-400 text-left">
+                    <th className="px-3 py-2 font-semibold rounded-l-md">Filled by</th>
+                    <th className="px-3 py-2 font-semibold">Level</th>
+                    <th className="px-3 py-2 font-semibold rounded-r-md">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyEntries.map((entry) => (
+                    <tr key={entry.id} className="border-t border-meadowBorder dark:border-darkBorder">
+                      <td className="px-3 py-2.5 font-medium text-gray-800 dark:text-gray-100">{entry.changedByName}</td>
+                      <td className="px-3 py-2.5 text-gray-500 dark:text-gray-400 text-xs">
+                        {Math.round(entry.previousLevel * 100)}% → {Math.round(entry.newLevel * 100)}%
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-500 dark:text-gray-400 text-xs">
+                        {new Date(entry.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <button onClick={closeHistory}
               className="mt-5 w-full py-2 border border-meadowBorder dark:border-darkBorder text-gray-700 dark:text-gray-300 rounded-md text-sm hover:bg-meadowMuted dark:hover:bg-darkSurface transition-colors">
               Close
             </button>

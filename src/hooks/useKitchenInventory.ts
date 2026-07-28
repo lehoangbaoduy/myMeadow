@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CATEGORY_ORDER, type InventoryItem, type RunOutEntry } from "@/lib/inventory";
+import { CATEGORY_ORDER, type InventoryItem, type LevelLogEntry, type RunOutEntry } from "@/lib/inventory";
 
 export function useKitchenInventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -13,6 +13,9 @@ export function useKitchenInventory() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [buzzingId, setBuzzingId] = useState<number | null>(null);
   const [resolvingId, setResolvingId] = useState<number | null>(null);
+  const [historyItem, setHistoryItem] = useState<InventoryItem | null>(null);
+  const [historyEntries, setHistoryEntries] = useState<LevelLogEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     fetch("/api/inventory")
@@ -30,11 +33,15 @@ export function useKitchenInventory() {
   const handleLevelChange = async (item: InventoryItem, newLevel: number) => {
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, level: newLevel } : i)));
     setSavingId(item.id);
-    await fetch(`/api/inventory/${item.id}`, {
+    const res = await fetch(`/api/inventory/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ level: newLevel }),
     });
+    if (res.ok) {
+      const updated: InventoryItem = await res.json();
+      setItems((prev) => prev.map((i) => (i.id === item.id ? updated : i)));
+    }
     setSavingId(null);
   };
 
@@ -52,6 +59,20 @@ export function useKitchenInventory() {
       body: JSON.stringify({ itemName: item.name }),
     });
     setBuzzingId(null);
+  };
+
+  const openHistory = async (item: InventoryItem) => {
+    setHistoryItem(item);
+    setLoadingHistory(true);
+    const res = await fetch(`/api/inventory/${item.id}/history`);
+    const data = await res.json();
+    setHistoryEntries(data);
+    setLoadingHistory(false);
+  };
+
+  const closeHistory = () => {
+    setHistoryItem(null);
+    setHistoryEntries([]);
   };
 
   const handleAddItem = async () => {
@@ -98,11 +119,16 @@ export function useKitchenInventory() {
     savingId,
     buzzingId,
     resolvingId,
+    historyItem,
+    historyEntries,
+    loadingHistory,
     fetchRunOut,
     handleLevelChange,
     handleBuzz,
     handleAddItem,
     handleResolve,
+    openHistory,
+    closeHistory,
     grouped,
   };
 }

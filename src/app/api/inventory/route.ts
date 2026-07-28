@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { attachLastRestocks, serializeItem } from "@/lib/inventory-history";
 
 const DEFAULT_ITEMS = [
   { name: "Fish Sauce",         category: "Cooking",   icon: "🐟" },
@@ -39,7 +40,7 @@ export async function GET() {
   await ensureDefaults();
 
   const items = await prisma.inventoryItem.findMany({ orderBy: [{ category: "asc" }, { name: "asc" }] });
-  return NextResponse.json(items);
+  return NextResponse.json(await attachLastRestocks(items));
 }
 
 export async function POST(req: NextRequest) {
@@ -52,5 +53,5 @@ export async function POST(req: NextRequest) {
   const item = await prisma.inventoryItem.create({
     data: { name, category: category || "Custom", icon: "📦", isCustom: true },
   });
-  return NextResponse.json(item, { status: 201 });
+  return NextResponse.json(serializeItem(item, null), { status: 201 });
 }

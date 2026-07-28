@@ -19,11 +19,16 @@ export default function MobileKitchenInventoryClient() {
     savingId,
     buzzingId,
     resolvingId,
+    historyItem,
+    historyEntries,
+    loadingHistory,
     fetchRunOut,
     handleLevelChange,
     handleBuzz,
     handleAddItem,
     handleResolve,
+    openHistory,
+    closeHistory,
     grouped,
   } = useKitchenInventory();
 
@@ -74,6 +79,14 @@ export default function MobileKitchenInventoryClient() {
                   )}
                 </div>
                 <LevelBar size="lg" level={item.level} onChange={(v) => handleLevelChange(item, v)} />
+                <button
+                  onClick={() => openHistory(item)}
+                  className="mt-2 w-full text-left text-xs text-gray-400 active:text-gray-600 dark:active:text-gray-300 transition-colors"
+                >
+                  {item.lastRestock
+                    ? `Last filled by ${item.lastRestock.name} · ${new Date(item.lastRestock.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                    : "No restock history yet"}
+                </button>
                 <button
                   onClick={() => handleBuzz(item)}
                   disabled={buzzingId === item.id}
@@ -132,6 +145,34 @@ export default function MobileKitchenInventoryClient() {
                 >
                   {resolvingId === r.id ? "…" : "Resolve"}
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </MobileBottomSheet>
+
+      <MobileBottomSheet
+        open={historyItem !== null}
+        onClose={closeHistory}
+        title={historyItem ? `${historyItem.icon ?? "📦"} ${historyItem.name} — History` : "History"}
+      >
+        {loadingHistory ? (
+          <p className="text-center py-8 text-gray-400 text-sm">Loading…</p>
+        ) : historyEntries.length === 0 ? (
+          <p className="text-center py-8 text-gray-400 text-sm">No restocks logged yet.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {historyEntries.map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between p-3 rounded-xl border border-meadowBorder dark:border-darkBorder bg-meadowLight dark:bg-darkSurface">
+                <div>
+                  <p className="font-medium text-sm text-gray-800 dark:text-gray-100">{entry.changedByName}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {Math.round(entry.previousLevel * 100)}% → {Math.round(entry.newLevel * 100)}%
+                  </p>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {new Date(entry.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </p>
               </div>
             ))}
           </div>
