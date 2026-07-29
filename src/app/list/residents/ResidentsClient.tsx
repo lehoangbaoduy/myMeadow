@@ -19,6 +19,7 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
     viewRequestsTenant, setViewRequestsTenant, tenantRequests, loadingRequests, resolvingId,
     showAddModal, setShowAddModal, addForm, setAddForm, adding, addError, setAddError,
     deletingId,
+    deactivatingTenant, setDeactivatingTenant, deactivationDate, setDeactivationDate, handleConfirmDeactivate,
     assigningTenant, setAssigningTenant, assignPlaceholderId, setAssignPlaceholderId, assigning, assignError,
     openEdit, updateForm, handleSaveEdit, handleToggleStatus,
     handleAddPlaceholder, handleDeletePlaceholder,
@@ -258,6 +259,37 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                   {adding ? "Adding…" : "Add Placeholder"}
                 </button>
                 <button onClick={() => setShowAddModal(false)}
+                  className="flex-1 py-2 border border-meadowBorder dark:border-darkBorder text-gray-700 dark:text-gray-300 rounded-md text-sm hover:bg-meadowMuted dark:hover:bg-darkSurface transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Deactivate Modal ─── */}
+      {deactivatingTenant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-darkCard rounded-xl border border-meadowBorder dark:border-darkBorder p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Deactivate — {deactivatingTenant.name}</h2>
+              <button onClick={() => setDeactivatingTenant(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold">&times;</button>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">
+              Sets the date this resident moved out / stopped being active. Past bills up to and including this date will still count their share.
+            </p>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className={labelClass}>Deactivation date</label>
+                <input type="date" value={deactivationDate} onChange={(e) => setDeactivationDate(e.target.value)} required className={inputClass} />
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleConfirmDeactivate} disabled={togglingId === deactivatingTenant.id || !deactivationDate}
+                  className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50">
+                  {togglingId === deactivatingTenant.id ? "Deactivating…" : "Deactivate"}
+                </button>
+                <button onClick={() => setDeactivatingTenant(null)}
                   className="flex-1 py-2 border border-meadowBorder dark:border-darkBorder text-gray-700 dark:text-gray-300 rounded-md text-sm hover:bg-meadowMuted dark:hover:bg-darkSurface transition-colors">
                   Cancel
                 </button>

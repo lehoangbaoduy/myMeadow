@@ -9,6 +9,7 @@ export interface TenantRow {
   email: string | null;
   notes: string | null;
   isActive: boolean;
+  deactivatedAt: Date | null;
   rentAmount: number | null;
   createdAt: Date;
   isPlaceholder: boolean;

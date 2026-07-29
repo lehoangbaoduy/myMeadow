@@ -5,6 +5,7 @@ import {
   MONTHS, UTIL_COLORS, getYearRange,
   type BillRow, type OcrResult, type ReviewForm, type UtilitiesProps, type UtilType,
 } from "@/lib/utilities";
+import { isActiveForPeriod } from "@/lib/resident-activity";
 
 export function useUtilitiesData({ isAdmin, bills, documents, tenantId, tenants, currentMonth, currentYear }: UtilitiesProps) {
   const [utilType, setUtilType] = useState<UtilType>("electric");
@@ -60,12 +61,22 @@ export function useUtilitiesData({ isAdmin, bills, documents, tenantId, tenants,
   // Chart range: Jan–Dec of selected chart year
   const chartRange = useMemo(() => getYearRange(chartYear), [chartYear]);
 
+  // Only residents active at some point during the viewed period (plus
+  // placeholders, which always reserve a share) count toward that period's
+  // split — a resident who moved out before this period, or hasn't moved in
+  // yet, shouldn't shoulder or dilute a bill they weren't around for.
+  const periodTenants = useMemo(() => {
+    const periodStart = new Date(splitYear, splitMonth - 1, 1);
+    return allTenants.filter((t) => t.isPlaceholder || isActiveForPeriod(t, periodStart));
+  }, [allTenants, splitYear, splitMonth]);
+
   // Bill selected for split/document view
   const splitBill = billMap.get(`${splitMonth}-${splitYear}`) ?? null;
   const splitBillAmount = splitBill ? ((splitBill[utilType as keyof BillRow] as number) ?? 0) : 0;
-  const totalShares = allTenants.reduce((sum, t) => sum + t.utilityShare, 0);
-  const myShare = allTenants.find((t) => t.id === tenantId)?.utilityShare ?? 1;
-  const myBill = totalShares > 0 ? (splitBillAmount * myShare) / totalShares : 0;
+  const totalShares = periodTenants.reduce((sum, t) => sum + t.utilityShare, 0);
+  const myPeriodTenant = periodTenants.find((t) => t.id === tenantId);
+  const myShare = myPeriodTenant?.utilityShare ?? null;
+  const myBill = myShare != null && totalShares > 0 ? (splitBillAmount * myShare) / totalShares : null;
 
   const handleShareSave = async (tenant: { id: number }, rawValue: string) => {
     const value = Number(rawValue);
@@ -256,7 +267,7 @@ export function useUtilitiesData({ isAdmin, bills, documents, tenantId, tenants,
   return {
     isAdmin, tenantId,
     utilType, setUtilType,
-    allTenants,
+    allTenants: periodTenants,
     shareDraft, setShareDraft,
     savingShareId,
     chartYear, setChartYear,

@@ -25,6 +25,8 @@ export interface TenantShareRow {
   name: string;
   utilityShare: number;
   isPlaceholder: boolean;
+  isActive: boolean;
+  deactivatedAt: string | null;
 }
 export interface UtilitiesProps {
   isAdmin: boolean;

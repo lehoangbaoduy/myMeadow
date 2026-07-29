@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getViewMode } from "@/lib/view-mode";
 import type { UtilityDocument } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { isPlaceholderClerkId, PLACEHOLDER_CLERK_PREFIX } from "@/lib/tenant-placeholder";
+import { isPlaceholderClerkId } from "@/lib/tenant-placeholder";
 import UtilitiesClient from "./UtilitiesClient";
 import MobileUtilitiesClient from "@/components/mobile/MobileUtilitiesClient";
 
@@ -18,17 +18,21 @@ export default async function UtilitiesPage() {
   const [bills, rawDocuments, shareTenantRows] = await Promise.all([
     prisma.utilityBill.findMany({ orderBy: [{ year: "asc" }, { month: "asc" }] }),
     prisma.utilityDocument.findMany({ orderBy: [{ year: "desc" }, { month: "desc" }] }),
-    // Active residents plus reserved placeholder rooms both count toward the split —
-    // only genuinely inactive (moved-out) real residents are excluded.
+    // All residents are fetched (not just currently-active) so the client can
+    // resolve, per viewed billing period, who was actually active back then —
+    // see isActiveForPeriod. Placeholders always count toward the split.
     prisma.tenant.findMany({
-      where: { OR: [{ isActive: true }, { user: { clerkId: { startsWith: PLACEHOLDER_CLERK_PREFIX } } }] },
       orderBy: { id: "asc" },
-      select: { id: true, name: true, utilityShare: true, user: { select: { clerkId: true } } },
+      select: {
+        id: true, name: true, utilityShare: true, isActive: true, deactivatedAt: true,
+        user: { select: { clerkId: true } },
+      },
     }),
   ]);
 
-  const shareTenants = shareTenantRows.map(({ user, ...tenant }) => ({
+  const shareTenants = shareTenantRows.map(({ user, deactivatedAt, ...tenant }) => ({
     ...tenant,
+    deactivatedAt: deactivatedAt ? deactivatedAt.toISOString() : null,
     isPlaceholder: isPlaceholderClerkId(user.clerkId),
   }));
 

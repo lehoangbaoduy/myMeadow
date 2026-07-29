@@ -38,6 +38,10 @@ export function useResidentsAdmin({ tenants: initialTenants, pendingMap: initial
   // Delete placeholder state
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  // Deactivate state
+  const [deactivatingTenant, setDeactivatingTenant] = useState<TenantRow | null>(null);
+  const [deactivationDate, setDeactivationDate] = useState<string>("");
+
   // Assign-to-placeholder state
   const [assigningTenant, setAssigningTenant] = useState<TenantRow | null>(null);
   const [assignPlaceholderId, setAssignPlaceholderId] = useState<string>("");
@@ -95,16 +99,37 @@ export function useResidentsAdmin({ tenants: initialTenants, pendingMap: initial
   };
 
   const handleToggleStatus = async (t: TenantRow) => {
+    if (t.isActive) {
+      setDeactivatingTenant(t);
+      setDeactivationDate(new Date().toISOString().split("T")[0]);
+      return;
+    }
     setTogglingId(t.id);
     const res = await fetch(`/api/tenants/${t.id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !t.isActive }),
+      body: JSON.stringify({ isActive: true }),
     });
     setTogglingId(null);
     if (res.ok) {
       const updated = await res.json();
-      setTenants((prev) => prev.map((row) => (row.id === updated.id ? { ...row, isActive: updated.isActive } : row)));
+      setTenants((prev) => prev.map((row) => (row.id === updated.id ? { ...row, isActive: updated.isActive, deactivatedAt: updated.deactivatedAt } : row)));
+    }
+  };
+
+  const handleConfirmDeactivate = async () => {
+    if (!deactivatingTenant || !deactivationDate) return;
+    setTogglingId(deactivatingTenant.id);
+    const res = await fetch(`/api/tenants/${deactivatingTenant.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: false, deactivatedAt: deactivationDate }),
+    });
+    setTogglingId(null);
+    if (res.ok) {
+      const updated = await res.json();
+      setTenants((prev) => prev.map((row) => (row.id === updated.id ? { ...row, isActive: updated.isActive, deactivatedAt: updated.deactivatedAt } : row)));
+      setDeactivatingTenant(null);
     }
   };
 
@@ -142,8 +167,8 @@ export function useResidentsAdmin({ tenants: initialTenants, pendingMap: initial
     if (res.ok) {
       setTenants((prev) => prev.filter((row) => row.id !== t.id));
     } else {
-      const d = await res.json();
-      window.alert(d.error ?? "Failed to delete");
+      const message = await res.json().then((d) => d.error, () => null);
+      window.alert(message ?? `Failed to delete (${res.status})`);
     }
   };
 
@@ -224,6 +249,11 @@ export function useResidentsAdmin({ tenants: initialTenants, pendingMap: initial
     addError,
     setAddError,
     deletingId,
+    deactivatingTenant,
+    setDeactivatingTenant,
+    deactivationDate,
+    setDeactivationDate,
+    handleConfirmDeactivate,
     assigningTenant,
     setAssigningTenant,
     assignPlaceholderId,

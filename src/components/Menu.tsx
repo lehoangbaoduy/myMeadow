@@ -45,6 +45,23 @@ const MaintenanceIcon = () => (
   </svg>
 );
 
+const RoomsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9.5 12 3l9 6.5" />
+    <path d="M5 10v10h14V10" />
+    <path d="M9 20v-6h6v6" />
+  </svg>
+);
+
+const PolicyIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 12h6M9 16h6M9 8h6" />
+    <path d="M6 3h9l3 3v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+  </svg>
+);
+
 type MenuItem = {
   label: string;
   href: string;
@@ -66,7 +83,9 @@ const menuItems: { title: string; items: MenuItem[] }[] = [
       { svgIcon: PersonalInventoryIcon, label: "My Inventory", href: "/personal-inventory", visible: ["ADMIN", "TENANT"] },
       { svgIcon: RotationsIcon, label: "Rotations",  href: "/admin/rotations", visible: ["ADMIN"] },
       { svgIcon: MaintenanceIcon, label: "Maintenance", href: "/admin/maintenance", visible: ["ADMIN"] },
+      { svgIcon: RoomsIcon, label: "Room Layout", href: "/admin/rooms", visible: ["ADMIN"] },
       { svgIcon: ManagementIcon, label: "Management", href: "/management",    visible: ["ADMIN"] },
+      { svgIcon: PolicyIcon, label: "House Policy", href: "/policy", visible: ["ADMIN", "TENANT"] },
     ],
   },
   {

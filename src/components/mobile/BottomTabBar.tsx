@@ -52,6 +52,21 @@ const MaintenanceIcon = () => (
   </svg>
 );
 
+const RoomsIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9.5 12 3l9 6.5" />
+    <path d="M5 10v10h14V10" />
+    <path d="M9 20v-6h6v6" />
+  </svg>
+);
+
+const PolicyIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 12h6M9 16h6M9 8h6" />
+    <path d="M6 3h9l3 3v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+  </svg>
+);
+
 const MoreIcon = () => (
   <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor">
     <circle cx="5" cy="12" r="1.8" />
@@ -89,10 +104,12 @@ export default function BottomTabBar({ role }: Props) {
           { label: "Residents", href: "/list/residents", icon: <Image src="/student.png" alt="" width={20} height={20} /> },
           { label: "Rotations", href: "/admin/rotations", icon: <RotationsIcon /> },
           { label: "Maintenance", href: "/admin/maintenance", icon: <MaintenanceIcon /> },
+          { label: "Room Layout", href: "/admin/rooms", icon: <RoomsIcon /> },
           { label: "Management", href: "/management", icon: <ManagementIcon /> },
         ]
       : []),
     { label: "My Inventory", href: "/personal-inventory", icon: <PersonalInventoryIcon /> },
+    { label: "House Policy", href: "/policy", icon: <PolicyIcon /> },
     { label: "Profile", href: "/profile", icon: <Image src="/profile.png" alt="" width={20} height={20} /> },
   ];
 

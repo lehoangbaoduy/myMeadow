@@ -109,6 +109,7 @@ export async function DELETE(
   await prisma.$transaction([
     prisma.rentReminderLog.deleteMany({ where: { tenantId } }),
     prisma.maintenanceRequest.deleteMany({ where: { tenantId } }),
+    prisma.notification.deleteMany({ where: { userId: tenant.user.id } }),
     prisma.tenant.delete({ where: { id: tenantId } }),
     prisma.user.delete({ where: { id: tenant.user.id } }),
   ]);

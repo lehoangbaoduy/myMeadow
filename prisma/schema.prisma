@@ -40,6 +40,7 @@ model Tenant {
   avatarData              Bytes?
   avatarMimeType          String?
   isActive                Boolean                  @default(true)
+  deactivatedAt           DateTime?
   dob                     DateTime?
   gender                  Gender
   phone                   String?
@@ -363,4 +364,29 @@ model PersonalInventoryListShare {
 
   @@unique([listId, tenantId])
   @@index([tenantId])
+}
+
+/// A physical room. Assignment to a resident is read off Tenant.roomNumber
+/// (matched by string, same field the Residents tab already writes) rather
+/// than a foreign key, so both admin surfaces can edit it through the same
+/// existing PUT /api/tenants/[id] route without a dual-write path.
+model Room {
+  id         Int         @id @default(autoincrement())
+  roomNumber String      @unique
+  notes      String?
+  images     RoomImage[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model RoomImage {
+  id            Int      @id @default(autoincrement())
+  roomId        Int
+  room          Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  imageData     Bytes
+  imageMimeType String
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([roomId])
 }

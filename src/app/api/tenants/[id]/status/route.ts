@@ -19,9 +19,18 @@ export async function PATCH(
     return NextResponse.json({ error: "isActive (boolean) required" }, { status: 400 });
   }
 
+  let deactivatedAt: Date | null = null;
+  if (!body.isActive) {
+    const parsedDate = body.deactivatedAt ? new Date(body.deactivatedAt) : null;
+    if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
+      return NextResponse.json({ error: "deactivatedAt (date) is required when deactivating a resident" }, { status: 400 });
+    }
+    deactivatedAt = parsedDate;
+  }
+
   const updated = await prisma.tenant.update({
     where: { id: Number(params.id) },
-    data: { isActive: body.isActive },
+    data: { isActive: body.isActive, deactivatedAt },
   });
 
   return NextResponse.json(updated);

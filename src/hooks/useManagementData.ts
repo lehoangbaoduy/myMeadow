@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { MONTHS, calcGross, type UtilityBill } from "@/lib/management-finance";
+import { useMemo, useState } from "react";
+import { MONTHS, calcGross, type ManagementTenant, type UtilityBill } from "@/lib/management-finance";
+import { isActiveForPeriod } from "@/lib/resident-activity";
 
-export function useManagementData() {
+export interface ManagementTenantSource extends ManagementTenant {
+  isActive: boolean;
+  deactivatedAt: string | null;
+}
+
+export function useManagementData(tenants: ManagementTenantSource[]) {
   const today = new Date();
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
@@ -31,14 +37,20 @@ export function useManagementData() {
 
   const years = Array.from({ length: 5 }, (_, i) => today.getFullYear() - 2 + i);
 
-  const { rows, gross, expenses } = calcGross(bill);
+  const tenantsForPeriod = useMemo(() => {
+    const periodStart = new Date(selectedYear, selectedMonth - 1, 1);
+    return tenants.filter((t) => isActiveForPeriod(t, periodStart));
+  }, [tenants, selectedYear, selectedMonth]);
+
+  const { rows, gross, expenses, totalShares } = calcGross(bill, tenantsForPeriod);
   const pieData = expenses.map((e) => ({ name: e.label, value: parseFloat(e.amount.toFixed(2)) }));
   const totalExpenses = pieData.reduce((s, d) => s + d.value, 0);
 
   const yearlyGross = yearlyBills.map((b, idx) => {
     const isFuture = new Date(selectedYear, idx, 1) > today;
     if (isFuture) return { month: MONTHS[idx], gross: 0, grossAbs: 0, isPositive: true, future: true };
-    const g = parseFloat(calcGross(b).gross.toFixed(2));
+    const monthTenants = tenants.filter((t) => isActiveForPeriod(t, new Date(selectedYear, idx, 1)));
+    const g = parseFloat(calcGross(b, monthTenants).gross.toFixed(2));
     return { month: MONTHS[idx], gross: g, grossAbs: Math.abs(g), isPositive: g >= 0, future: false };
   });
   const totalYearlyGross = yearlyGross.reduce((s, m) => s + m.gross, 0);
@@ -59,6 +71,8 @@ export function useManagementData() {
     years,
     rows,
     gross,
+    totalShares,
+    tenantsForPeriod,
     pieData,
     totalExpenses,
     yearlyGross,

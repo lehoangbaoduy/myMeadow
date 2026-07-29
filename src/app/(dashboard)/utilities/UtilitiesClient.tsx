@@ -243,7 +243,7 @@ export default function UtilitiesClient(props: UtilitiesProps) {
           ) : (
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Period: not specified</p>
           )}
-          {tenantId != null && splitBill && (
+          {tenantId != null && splitBill && myShare != null && myBill != null && (
             <div className="mb-4 px-4 py-3 rounded-xl bg-gradient-to-r from-meadowMuted to-orange-100/50 dark:from-darkBorder dark:to-darkBorder/50 border border-orange-200/50 dark:border-darkBorder">
               <p className="text-xs text-gray-600 dark:text-gray-400">Your share ({myShare} share{myShare !== 1 ? "s" : ""})</p>
               <p className="text-2xl font-bold text-meadowOrange mt-0.5">${myBill.toFixed(2)}</p>

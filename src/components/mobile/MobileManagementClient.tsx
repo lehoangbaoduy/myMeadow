@@ -4,18 +4,22 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
 } from "recharts";
-import { useManagementData } from "@/hooks/useManagementData";
+import { useManagementData, type ManagementTenantSource } from "@/hooks/useManagementData";
 import { MONTHS, PIE_COLORS, MORTGAGE_AMOUNT } from "@/lib/management-finance";
 import MobileCard from "./MobileCard";
 
-export default function MobileManagementClient() {
+interface Props {
+  tenants: ManagementTenantSource[];
+}
+
+export default function MobileManagementClient({ tenants }: Props) {
   const {
     selectedMonth, setSelectedMonth,
     selectedYear, setSelectedYear,
     submitted, loading, bill, yearlyBills,
-    handleSubmit, years, rows, gross,
+    handleSubmit, years, rows, gross, totalShares, tenantsForPeriod,
     pieData, totalExpenses, yearlyGross, totalYearlyGross, lineData, fmt,
-  } = useManagementData();
+  } = useManagementData(tenants);
 
   const inputClass = "px-3 py-2 rounded-xl border border-meadowBorder dark:border-darkBorder bg-white dark:bg-darkSurface text-gray-800 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-meadowOrange/40 transition-all";
 
@@ -189,7 +193,7 @@ export default function MobileManagementClient() {
             </MobileCard>
 
             <p className="text-[11px] text-gray-400">
-              Mortgage = ${MORTGAGE_AMOUNT.toLocaleString()}/mo · Shares (6.5 total): Dương+Ngân 2 · Cường 1 · Khoa+Thảo 2 · Bảo 1 · Nhi 0.5
+              Mortgage = ${MORTGAGE_AMOUNT.toLocaleString()}/mo · {tenantsForPeriod.length} active resident{tenantsForPeriod.length !== 1 ? "s" : ""} · {totalShares} utility share{totalShares !== 1 ? "s" : ""} total for {MONTHS[selectedMonth - 1]} {selectedYear}
             </p>
           </section>
         </>
