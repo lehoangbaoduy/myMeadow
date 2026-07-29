@@ -70,13 +70,18 @@ export default function MobileResidentsClient({ tenants: initialTenants, pending
                   <span className="text-[11px] text-gray-400">{formatDate(tenant.dob)}</span>
                 </div>
               </div>
-              <span className={`text-[10px] px-2 py-1 rounded-full font-semibold flex-shrink-0 ${
-                tenant.isActive
-                  ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                  : "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"
-              }`}>
-                {tenant.isActive ? "Active" : "Inactive"}
-              </span>
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${
+                  tenant.isActive
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                    : "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"
+                }`}>
+                  {tenant.isActive ? "Active" : "Inactive"}
+                </span>
+                {!tenant.isActive && tenant.deactivatedAt && (
+                  <span className="text-[9px] text-gray-400">Since {formatDate(tenant.deactivatedAt)}</span>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap mt-2">

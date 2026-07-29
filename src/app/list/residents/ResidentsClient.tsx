@@ -94,6 +94,9 @@ export default function ResidentsClient({ tenants: initialTenants, pendingMap: i
                   }`}>
                     {tenant.isActive ? "Active" : "Inactive"}
                   </span>
+                  {!tenant.isActive && tenant.deactivatedAt && (
+                    <p className="text-[10px] text-gray-400 mt-1">Since {formatDate(tenant.deactivatedAt)}</p>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2 flex-wrap">
