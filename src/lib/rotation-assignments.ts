@@ -1,5 +1,5 @@
 import { getThursdayOfWeek } from "@/lib/trash-schedule";
-import { getWeekIndex, isRecycleWeek, bathroomOccurrenceIndexFromParts, accumulatedShiftAsOf } from "@/lib/rotation-core";
+import { getWeekIndex, isRecycleWeek, bathroomOccurrenceIndexFromParts, accumulatedShiftAsOf, nextBathroomOccurrenceDate } from "@/lib/rotation-core";
 import type { RosterLabelEntry, RotationScheduleSource } from "@/lib/duty-tenants";
 
 /**
@@ -53,4 +53,4 @@ export function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
-export { getThursdayOfWeek };
+export { getThursdayOfWeek, nextBathroomOccurrenceDate };

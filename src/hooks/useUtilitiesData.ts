@@ -61,13 +61,14 @@ export function useUtilitiesData({ isAdmin, bills, documents, tenantId, tenants,
   // Chart range: Jan–Dec of selected chart year
   const chartRange = useMemo(() => getYearRange(chartYear), [chartYear]);
 
-  // Only residents active at some point during the viewed period (plus
-  // placeholders, which always reserve a share) count toward that period's
-  // split — a resident who moved out before this period, or hasn't moved in
-  // yet, shouldn't shoulder or dilute a bill they weren't around for.
+  // Only residents (including placeholders reserving a room) active at some
+  // point during the viewed period count toward that period's split — a
+  // resident who moved out before this period, or hasn't moved in yet,
+  // shouldn't shoulder or dilute a bill they weren't around for. Placeholders
+  // follow the exact same deactivatedAt-based rule as real residents.
   const periodTenants = useMemo(() => {
     const periodStart = new Date(splitYear, splitMonth - 1, 1);
-    return allTenants.filter((t) => t.isPlaceholder || isActiveForPeriod(t, periodStart));
+    return allTenants.filter((t) => isActiveForPeriod(t, periodStart));
   }, [allTenants, splitYear, splitMonth]);
 
   // Bill selected for split/document view

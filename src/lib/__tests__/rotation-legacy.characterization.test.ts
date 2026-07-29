@@ -15,6 +15,7 @@ import {
   getTrashAssignment,
   getBathroomAssignment,
   getDishesAssignment,
+  nextBathroomOccurrenceDate,
 } from "@/lib/rotation-assignments";
 import type { RotationScheduleSource } from "@/lib/duty-tenants";
 
@@ -147,6 +148,32 @@ describe("FIXED: rotation-assignments bathroom uses the true semimonthly (1st/15
     const fifteenth = getBathroomAssignment(new Date(2025, 0, 15), bathroomRoster);
     expect(first).toBe(midWindow);
     expect(fifteenth).not.toBe(first);
+  });
+});
+
+describe("nextBathroomOccurrenceDate", () => {
+  it("returns the same day when given the 1st", () => {
+    const d = nextBathroomOccurrenceDate(new Date(2025, 0, 1));
+    expect(d).toEqual(new Date(2025, 0, 1));
+  });
+
+  it("returns the same day when given the 15th", () => {
+    const d = nextBathroomOccurrenceDate(new Date(2025, 0, 15));
+    expect(d).toEqual(new Date(2025, 0, 15));
+  });
+
+  it("rolls forward to the 15th for any day in the 2nd-14th window", () => {
+    expect(nextBathroomOccurrenceDate(new Date(2025, 0, 2))).toEqual(new Date(2025, 0, 15));
+    expect(nextBathroomOccurrenceDate(new Date(2025, 0, 14))).toEqual(new Date(2025, 0, 15));
+  });
+
+  it("rolls forward to the 1st of the next month for any day after the 15th", () => {
+    expect(nextBathroomOccurrenceDate(new Date(2025, 0, 16))).toEqual(new Date(2025, 1, 1));
+    expect(nextBathroomOccurrenceDate(new Date(2025, 0, 31))).toEqual(new Date(2025, 1, 1));
+  });
+
+  it("rolls over into the next calendar year at December 31st", () => {
+    expect(nextBathroomOccurrenceDate(new Date(2025, 11, 31))).toEqual(new Date(2026, 0, 1));
   });
 });
 

@@ -75,6 +75,17 @@ function getFridayOfWeek(date: Date): Date {
   return d;
 }
 
+// Forward-rolling "next 1st/15th on or after this date" — the bathroom
+// equivalent of getThursdayOfWeek/getFridayOfWeek, so "current turn" widgets
+// can resolve the closest upcoming occurrence (and its shift accumulation)
+// instead of whichever half-month segment "today" happens to fall inside.
+function nextBathroomOccurrenceDate(date: Date): Date {
+  const d = toDateOnly(date);
+  if (d.getDate() > 15) return new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  if (d.getDate() > 1) return new Date(d.getFullYear(), d.getMonth(), 15);
+  return d;
+}
+
 // Backward-or-same "Thursday of this calendar week" — used internally so any
 // day of the week (a Thursday for trash, a Friday for dishes) normalizes to
 // the same week index, which is what makes trash+dishes sync trivial.
@@ -179,12 +190,7 @@ function toIsoDateString(date: Date): string {
 export function upcomingRepresentativeDates(rotationType: RotationType, fromDate: Date, count: number): Date[] {
   if (rotationType === "BATHROOM") {
     const dates: Date[] = [];
-    let d = toDateOnly(fromDate);
-    if (d.getDate() > 15) {
-      d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-    } else if (d.getDate() > 1) {
-      d = new Date(d.getFullYear(), d.getMonth(), 15);
-    }
+    let d = nextBathroomOccurrenceDate(fromDate);
     for (let i = 0; i < count; i++) {
       dates.push(new Date(d));
       d = d.getDate() === 1 ? new Date(d.getFullYear(), d.getMonth(), 15) : new Date(d.getFullYear(), d.getMonth() + 1, 1);
@@ -477,4 +483,4 @@ export async function ensureOccurrence(choreTable: ChoreTable, date: Date) {
   });
 }
 
-export { getWeekIndex, getThursdayOfWeek, getFridayOfWeek, getBaseIndex, BASE_THURSDAY };
+export { getWeekIndex, getThursdayOfWeek, getFridayOfWeek, getBaseIndex, BASE_THURSDAY, nextBathroomOccurrenceDate };

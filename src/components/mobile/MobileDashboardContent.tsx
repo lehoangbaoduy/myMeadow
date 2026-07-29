@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CUR_MONTH, CUR_YEAR, fmtLabel, type UtilityBillRow } from "@/components/DashboardContent";
 import { getThursdayOfWeek } from "@/lib/trash-schedule";
-import { getTrashAssignment, getBathroomAssignment } from "@/lib/rotation-assignments";
+import { getTrashAssignment, getBathroomAssignment, nextBathroomOccurrenceDate } from "@/lib/rotation-assignments";
 import type { RotationScheduleSource } from "@/lib/duty-tenants";
 import MobileCard from "./MobileCard";
 
@@ -32,8 +32,10 @@ export default function MobileDashboardContent({ bills, trashTenants, bathroomTe
   const today = new Date();
   const thisThursday = getThursdayOfWeek(today);
   const trashAssignment = getTrashAssignment(thisThursday, trashTenants);
-  const bathroomAssignee = getBathroomAssignment(today, bathroomTenants);
+  const nextBathroomDate = nextBathroomOccurrenceDate(today);
+  const bathroomAssignee = getBathroomAssignment(nextBathroomDate, bathroomTenants);
   const thursdayLabel = thisThursday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const bathroomDateLabel = nextBathroomDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
     <div className="flex flex-col gap-4">
@@ -104,10 +106,11 @@ export default function MobileDashboardContent({ bills, trashTenants, bathroomTe
         </span>
       </MobileCard>
 
-      {/* Card 4 — Bathroom schedule, this week */}
+      {/* Card 4 — Bathroom schedule, next turn */}
       <MobileCard>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🛁 Bathroom — Current Turn</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🛁 Bathroom — Next Turn</h2>
+          <span className="text-[11px] text-gray-400">{bathroomDateLabel}</span>
         </div>
         <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{bathroomAssignee}</p>
       </MobileCard>
