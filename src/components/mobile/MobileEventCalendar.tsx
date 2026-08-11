@@ -26,7 +26,7 @@ interface Birthday {
   day: number;
 }
 
-const EMPTY_SCHEDULE_SOURCE: RotationScheduleSource = { roster: [], shifts: [] };
+const EMPTY_SCHEDULE_SOURCE: RotationScheduleSource = { roster: [], shifts: [], recycleShifts: [] };
 
 interface Props {
   isAdmin?: boolean;

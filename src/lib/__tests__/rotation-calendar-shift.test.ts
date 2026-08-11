@@ -96,7 +96,7 @@ describe("calendar-facing resolution reflects a shift recorded with effectiveDat
     while (day.getDay() !== 4) day.setDate(day.getDate() + 1);
 
     const withShift = getTrashAssignment(day, source);
-    const withoutShift = getTrashAssignment(day, { roster: source.roster, shifts: [] });
+    const withoutShift = getTrashAssignment(day, { roster: source.roster, shifts: [], recycleShifts: [] });
     expect(withShift.tenant).not.toBe(withoutShift.tenant);
   });
 });

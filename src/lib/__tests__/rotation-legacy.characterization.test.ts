@@ -27,7 +27,7 @@ import type { RotationScheduleSource } from "@/lib/duty-tenants";
  */
 
 function toSource(names: string[]): RotationScheduleSource {
-  return { roster: names.map((name) => ({ label: name, members: [name] })), shifts: [] };
+  return { roster: names.map((name) => ({ label: name, members: [name] })), shifts: [], recycleShifts: [] };
 }
 
 describe("trash-schedule week index (anchor: Thursday Jan 2 2025)", () => {

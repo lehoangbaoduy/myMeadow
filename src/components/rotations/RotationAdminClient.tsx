@@ -5,6 +5,7 @@ import type { RotationAdminData } from "@/lib/rotation-admin-data";
 import { useRotationAdmin, type RotationTypeKey } from "@/hooks/useRotationAdmin";
 import RosterPanel from "./RosterPanel";
 import ShiftPanel from "./ShiftPanel";
+import RecyclePanel from "./RecyclePanel";
 import OccurrencePanel from "./OccurrencePanel";
 
 type Props = {
@@ -29,6 +30,7 @@ export default function RotationAdminClient({ initialData }: Props) {
     createTeam,
     disbandTeam,
     recordShift,
+    recordRecycleShift,
     completeOccurrence,
   } = useRotationAdmin(initialData);
 
@@ -89,6 +91,11 @@ export default function RotationAdminClient({ initialData }: Props) {
 
           {tab === "TRASH_DISHES" ? (
             <>
+              <RecyclePanel
+                recentShifts={data.recentRecycleShifts}
+                busy={busy}
+                onSubmit={recordRecycleShift}
+              />
               <OccurrencePanel
                 title="Trash pickup"
                 table="TRASH"

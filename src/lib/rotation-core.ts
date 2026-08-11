@@ -107,6 +107,38 @@ export function isRecycleWeek(weekIndex: number): boolean {
   return weekIndex % 2 !== 0;
 }
 
+/** One recorded recycle-schedule override, serialized for a client component prop. */
+export interface RecycleShiftDelta {
+  effectiveDate: string; // "YYYY-MM-DD", always a Thursday
+  hasRecycle: boolean;
+}
+
+/**
+ * Resolves whether the week at `weekIndex` is a recycle week, honoring any
+ * admin-recorded RecycleShift overrides. The most recent override whose own
+ * week is <= weekIndex re-anchors the biweekly alternation from that week
+ * forward (so it still alternates after the override, it doesn't freeze);
+ * weeks before any recorded override fall back to the base parity rule.
+ * Comparing by week index (not raw date) keeps every tile within the same
+ * calendar week resolving consistently, matching how getWeekIndex already
+ * normalizes any weekday to its Thursday-anchored week.
+ */
+export function resolveHasRecycle(weekIndex: number, recycleShifts: RecycleShiftDelta[]): boolean {
+  let anchorWeek = -Infinity;
+  let anchorValue: boolean | null = null;
+  for (const shift of recycleShifts) {
+    const shiftDate = parseLocalDateString(shift.effectiveDate);
+    if (!shiftDate) continue;
+    const shiftWeek = getWeekIndex(shiftDate);
+    if (shiftWeek <= weekIndex && shiftWeek > anchorWeek) {
+      anchorWeek = shiftWeek;
+      anchorValue = shift.hasRecycle;
+    }
+  }
+  if (anchorValue === null) return isRecycleWeek(weekIndex);
+  return (weekIndex - anchorWeek) % 2 === 0 ? anchorValue : !anchorValue;
+}
+
 export function getThursdaysInMonth(year: number, month: number): Date[] {
   const thursdays: Date[] = [];
   const d = new Date(year, month, 1);
@@ -288,6 +320,9 @@ export interface ShiftDelta {
 export interface RotationScheduleSource {
   roster: RosterLabelEntry[];
   shifts: ShiftDelta[];
+  // Only ever populated for TRASH_DISHES — bathroom/dishes have no recycle
+  // concept, so this is always [] for them.
+  recycleShifts: RecycleShiftDelta[];
 }
 
 /** Sums shift deltas effective on/before `date` — the client-side, already-fetched-data equivalent of getAccumulatedShift(). */
@@ -313,7 +348,15 @@ export async function getRotationScheduleSource(rotationType: RotationType): Pro
     offsetPositions: s.offsetPositions,
   }));
 
-  return { roster: resolved, shifts };
+  const recycleShiftRows = rotationType === "TRASH_DISHES"
+    ? await prisma.recycleShift.findMany({ select: { effectiveDate: true, hasRecycle: true } })
+    : [];
+  const recycleShifts = recycleShiftRows.map((s) => ({
+    effectiveDate: toIsoDateString(s.effectiveDate),
+    hasRecycle: s.hasRecycle,
+  }));
+
+  return { roster: resolved, shifts, recycleShifts };
 }
 
 /** Full Tenant records (contact info included) for whoever is assigned on `date` — used to deliver reminders to every member of a team. */
@@ -376,6 +419,80 @@ export async function recordShift(rotationType: RotationType, input: RecordShift
   });
 
   return { id: shift.id };
+}
+
+export interface RecordRecycleShiftInput {
+  effectiveDate: Date;
+  hasRecycle: boolean;
+  actorUserId: number;
+  reason?: string;
+}
+
+/**
+ * Records a recycle-schedule override as an effective-dated value, mirroring
+ * recordShift's "don't touch history" design: weeks before effectiveDate
+ * keep resolving via whatever applied before (an earlier override, or the
+ * base parity rule); only effectiveDate and every Thursday after it changes.
+ */
+export async function recordRecycleShift(input: RecordRecycleShiftInput): Promise<{ id: number }> {
+  const today = toDateOnly(new Date());
+  const effective = toDateOnly(input.effectiveDate);
+  if (effective < today) {
+    throw new Error("effectiveDate cannot be in the past");
+  }
+  if (effective.getDay() !== 4) {
+    throw new Error("effectiveDate must be a Thursday");
+  }
+
+  const shift = await prisma.recycleShift.create({
+    data: {
+      effectiveDate: effective,
+      hasRecycle: input.hasRecycle,
+      actorUserId: input.actorUserId,
+      reason: input.reason,
+    },
+  });
+
+  return { id: shift.id };
+}
+
+export interface RecycleOccurrencePreview {
+  date: string;
+  before: boolean;
+  after: boolean;
+}
+
+export interface RecycleShiftPreview {
+  occurrences: RecycleOccurrencePreview[];
+}
+
+/**
+ * Read-only "what if" preview for a hypothetical (not-yet-recorded) recycle
+ * override — shows the next few Thursdays as they resolve today ("before")
+ * vs. as they'd resolve with this override applied from effectiveDate
+ * onward ("after"). Never writes anything.
+ */
+export async function previewRecycleShift(effectiveDate: Date, hasRecycle: boolean, count = 6): Promise<RecycleShiftPreview> {
+  const existingRows = await prisma.recycleShift.findMany({ select: { effectiveDate: true, hasRecycle: true } });
+  const existing: RecycleShiftDelta[] = existingRows.map((s) => ({
+    effectiveDate: toIsoDateString(s.effectiveDate),
+    hasRecycle: s.hasRecycle,
+  }));
+  const hypothetical: RecycleShiftDelta[] = [...existing, { effectiveDate: toIsoDateString(effectiveDate), hasRecycle }];
+
+  const start = getThursdayOfWeek(effectiveDate);
+  const occurrences: RecycleOccurrencePreview[] = [];
+  for (let i = 0; i < count; i++) {
+    const date = addDays(start, i * 7);
+    const weekIdx = getWeekIndex(date);
+    occurrences.push({
+      date: toIsoDateString(date),
+      before: resolveHasRecycle(weekIdx, existing),
+      after: resolveHasRecycle(weekIdx, hypothetical),
+    });
+  }
+
+  return { occurrences };
 }
 
 export interface OccurrencePreview {
@@ -448,12 +565,23 @@ export async function ensureOccurrence(choreTable: ChoreTable, date: Date) {
     if (existing) return existing;
     const resolved = await resolveUnit(rotationType, date);
     const weekIdx = getWeekIndex(date);
+    const latestOverride = await prisma.recycleShift.findFirst({
+      where: { effectiveDate: { lte: date } },
+      orderBy: { effectiveDate: "desc" },
+      select: { effectiveDate: true, hasRecycle: true },
+    });
+    const isRecycle = latestOverride
+      ? (() => {
+          const anchorWeek = getWeekIndex(latestOverride.effectiveDate);
+          return (weekIdx - anchorWeek) % 2 === 0 ? latestOverride.hasRecycle : !latestOverride.hasRecycle;
+        })()
+      : isRecycleWeek(weekIdx);
     return prisma.trashAssignment.create({
       data: {
         date,
         unitId: resolved?.unitId ?? null,
         deletedUnitLabel: resolved ? null : "Unassigned",
-        isRecycle: isRecycleWeek(weekIdx),
+        isRecycle,
       },
     });
   }

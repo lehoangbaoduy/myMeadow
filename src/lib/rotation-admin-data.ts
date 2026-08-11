@@ -23,6 +23,15 @@ export interface ShiftRow {
   createdAt: string;
 }
 
+export interface RecycleShiftRow {
+  id: number;
+  effectiveDate: string;
+  hasRecycle: boolean;
+  reason: string | null;
+  actorName: string;
+  createdAt: string;
+}
+
 export interface EligibleTenant {
   id: number;
   name: string;
@@ -48,6 +57,7 @@ export interface RotationAdminData {
   recentTrash: OccurrenceRow[];
   recentDishes: OccurrenceRow[];
   recentBathroom: OccurrenceRow[];
+  recentRecycleShifts: RecycleShiftRow[];
 }
 
 const unitInclude = {
@@ -106,14 +116,34 @@ async function getRecentOccurrences<T extends { id: number; date: Date; status: 
   }));
 }
 
+async function getRecentRecycleShifts(): Promise<RecycleShiftRow[]> {
+  const shifts = await prisma.recycleShift.findMany({ orderBy: { createdAt: "desc" }, take: 10 });
+
+  const actorIds = Array.from(new Set(shifts.map((s) => s.actorUserId)));
+  const actors = actorIds.length
+    ? await prisma.user.findMany({ where: { id: { in: actorIds } }, include: { tenant: { select: { name: true } } } })
+    : [];
+  const actorNameById = new Map(actors.map((a) => [a.id, a.tenant?.name ?? "Admin"]));
+
+  return shifts.map((s) => ({
+    id: s.id,
+    effectiveDate: s.effectiveDate.toISOString().split("T")[0],
+    hasRecycle: s.hasRecycle,
+    reason: s.reason,
+    actorName: actorNameById.get(s.actorUserId) ?? "Admin",
+    createdAt: s.createdAt.toISOString(),
+  }));
+}
+
 export async function getRotationAdminData(): Promise<RotationAdminData> {
-  const [trashDishes, bathroom, activeTenants, recentTrash, recentDishes, recentBathroom] = await Promise.all([
+  const [trashDishes, bathroom, activeTenants, recentTrash, recentDishes, recentBathroom, recentRecycleShifts] = await Promise.all([
     getRotationTypeData("TRASH_DISHES"),
     getRotationTypeData("BATHROOM"),
     prisma.tenant.findMany({ where: { isActive: true }, include: { user: { select: { clerkId: true } } } }),
     getRecentOccurrences((args) => prisma.trashAssignment.findMany(args)),
     getRecentOccurrences((args) => prisma.dishesAssignment.findMany(args)),
     getRecentOccurrences((args) => prisma.bathroomAssignment.findMany(args)),
+    getRecentRecycleShifts(),
   ]);
 
   const allActiveTenants = activeTenants
@@ -121,5 +151,5 @@ export async function getRotationAdminData(): Promise<RotationAdminData> {
     .map((t) => ({ id: t.id, name: t.name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  return { TRASH_DISHES: trashDishes, BATHROOM: bathroom, allActiveTenants, recentTrash, recentDishes, recentBathroom };
+  return { TRASH_DISHES: trashDishes, BATHROOM: bathroom, allActiveTenants, recentTrash, recentDishes, recentBathroom, recentRecycleShifts };
 }

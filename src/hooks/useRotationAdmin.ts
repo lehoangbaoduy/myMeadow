@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { RotationAdminData, RosterUnitRow, ShiftRow, OccurrenceRow } from "@/lib/rotation-admin-data";
+import type { RotationAdminData, RosterUnitRow, ShiftRow, OccurrenceRow, RecycleShiftRow } from "@/lib/rotation-admin-data";
 
 export type RotationTypeKey = "TRASH_DISHES" | "BATHROOM";
 export type ChoreTableKey = "TRASH" | "DISHES" | "BATHROOM";
@@ -133,6 +133,23 @@ export function useRotationAdmin(initialData: RotationAdminData) {
     return result;
   }
 
+  async function recordRecycleShift(effectiveDate: string, hasRecycle: boolean, reason: string) {
+    const result = await runMutation<RecycleShiftRow>(() =>
+      fetch(`/api/trash-schedule/recycle-shift`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ effectiveDate, hasRecycle, reason: reason || undefined }),
+      })
+    );
+    if (result.ok) {
+      setData((prev) => ({
+        ...prev,
+        recentRecycleShifts: [result.data, ...prev.recentRecycleShifts].slice(0, 10),
+      }));
+    }
+    return result;
+  }
+
   async function completeOccurrence(table: ChoreTableKey, dateStr: string, status: "COMPLETED" | "MISSED", notes: string) {
     const result = await runMutation<{ id: number; date: string; status: string; notes: string | null; completedAt: string | null }>(
       () =>
@@ -170,6 +187,7 @@ export function useRotationAdmin(initialData: RotationAdminData) {
     createTeam,
     disbandTeam,
     recordShift,
+    recordRecycleShift,
     completeOccurrence,
   };
 }

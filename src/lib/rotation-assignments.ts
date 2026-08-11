@@ -1,5 +1,5 @@
 import { getThursdayOfWeek } from "@/lib/trash-schedule";
-import { getWeekIndex, isRecycleWeek, bathroomOccurrenceIndexFromParts, accumulatedShiftAsOf, nextBathroomOccurrenceDate } from "@/lib/rotation-core";
+import { getWeekIndex, resolveHasRecycle, bathroomOccurrenceIndexFromParts, accumulatedShiftAsOf, nextBathroomOccurrenceDate } from "@/lib/rotation-core";
 import type { RosterLabelEntry, RotationScheduleSource } from "@/lib/duty-tenants";
 
 /**
@@ -31,7 +31,7 @@ function pickFromRoster(source: RotationScheduleSource, baseIndex: number, date:
 export function getTrashAssignment(thursday: Date, source: RotationScheduleSource) {
   const weekIdx = getWeekIndex(thursday);
   const unit = pickFromRoster(source, weekIdx, thursday);
-  return { tenant: unit.label, members: unit.members, hasRecycle: isRecycleWeek(weekIdx) };
+  return { tenant: unit.label, members: unit.members, hasRecycle: resolveHasRecycle(weekIdx, source.recycleShifts) };
 }
 
 /** `date` is any day — the semimonthly occurrence (1st or 15th cycle) is derived from its calendar day, not the weekday. */

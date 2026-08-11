@@ -120,6 +120,22 @@ model RotationShift {
   @@index([rotationType, effectiveDate])
 }
 
+/// Effective-dated override of which Thursdays are recycle weeks. The most
+/// recent row with effectiveDate <= a given Thursday wins; weeks before any
+/// recorded row fall back to the base parity rule (isRecycleWeek). Mirrors
+/// RotationShift's "don't touch history, only affect dates >= effectiveDate"
+/// design, but stores an absolute hasRecycle value instead of an offset.
+model RecycleShift {
+  id            Int      @id @default(autoincrement())
+  effectiveDate DateTime
+  hasRecycle    Boolean
+  actorUserId   Int
+  reason        String?
+  createdAt     DateTime @default(now())
+
+  @@index([effectiveDate])
+}
+
 model UtilityBill {
   id            Int      @id @default(autoincrement())
   month         Int

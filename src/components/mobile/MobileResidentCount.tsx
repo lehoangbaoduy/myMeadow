@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { isPlaceholderClerkId, PLACEHOLDER_CLERK_PREFIX } from "@/lib/tenant-placeholder";
+import { isPlaceholderClerkId } from "@/lib/tenant-placeholder";
 import MobileCard from "./MobileCard";
 
 const MobileResidentCount = async () => {
   const tenantRows = await prisma.tenant.findMany({
-    where: { OR: [{ isActive: true }, { user: { clerkId: { startsWith: PLACEHOLDER_CLERK_PREFIX } } }] },
+    // Active residents (placeholders included, so a reserved room still
+    // counts) — a deactivated placeholder is dropped just like a deactivated
+    // real resident.
+    where: { isActive: true },
     select: { name: true, gender: true, user: { select: { clerkId: true } } },
     orderBy: { name: "asc" },
   });
